@@ -1,0 +1,61 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "stats": {
+      ".read": true,
+      "$site": {
+        "jours": {
+          "$jour": {
+            "vues": {
+              ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/)",
+              ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+            },
+            "visiteurs": {
+              ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/)",
+              ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+            },
+            "nouveaux": {
+              ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/)",
+              ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+            },
+            "appli": {
+              ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/)",
+              ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+            },
+            "appareils": {
+              "$type": {
+                ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/) && ($type == 'mobile' || $type == 'ordi')",
+                ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+              }
+            },
+            "pages": {
+              "$page": {
+                ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/) && $page.matches(/^[a-z0-9-]{2,40}$/)",
+                ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+              }
+            }
+          }
+        },
+        "mois": {
+          "$mois": {
+            "visiteurs": {
+              ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $mois.matches(/^20[0-9]{2}-[0-9]{2}$/)",
+              ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+            }
+          }
+        },
+        "total": {
+          "vues": {
+            ".write": "$site.matches(/^[a-z0-9-]{2,30}$/)",
+            ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+          },
+          "visiteurs": {
+            ".write": "$site.matches(/^[a-z0-9-]{2,30}$/)",
+            ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+          }
+        }
+      }
+    }
+  }
+}
