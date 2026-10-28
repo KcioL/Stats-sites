@@ -1,9 +1,9 @@
 // Tableau de bord des visites de tous les sites qui utilisent suivi.js.
-// Lit les compteurs rangés sous stats/<site>/ dans une ou plusieurs Realtime Database (une par site,
-// ou une commune ; voir config.js), par l'API REST de Firebase, sans bibliothèque,
+// Lit les compteurs rangés sous stats/<site>/ dans la Realtime Database de chaque site (voir config.js),
+// par l'API REST de Firebase, sans bibliothèque,
 // et va chercher les nouveaux chiffres toutes les ACTUALISATION secondes.
 // Ajoute ?demo à l'adresse pour voir le tableau rempli de chiffres inventés.
-import { BASE, ACTUALISATION, SITES } from './config.js';
+import { ACTUALISATION, SITES } from './config.js';
 
 const sansSlash = (u) => String(u || '').trim().replace(/\/+$/, '');
 
@@ -344,9 +344,9 @@ async function lire(base, chemin, params = {}) {
   return r.json();
 }
 
-// Les bases à lire : la base commune (BASE) et celle de chaque site qui en a une dans config.js
-const baseDuSite = (id) => sansSlash((SITES[id] && SITES[id].base) || BASE);
-const BASES = [...new Set([BASE, ...Object.values(SITES).map((s) => s.base)].map(sansSlash).filter(Boolean))];
+// Les bases à lire : celle de chaque site de config.js (plusieurs sites peuvent partager une base)
+const baseDuSite = (id) => sansSlash(SITES[id] && SITES[id].base);
+const BASES = [...new Set(Object.values(SITES).map((s) => sansSlash(s.base)).filter(Boolean))];
 let problemes = [];   // bases qui n'ont pas répondu : [{ base, refus }]
 
 async function charger() {
@@ -356,8 +356,8 @@ async function charger() {
   await Promise.all(BASES.map(async (base) => {
     try {
       const liste = (await lire(base, 'stats', { shallow: 'true' })) || {};
-      // Un site n'est lu que dans sa propre base (évite de le compter deux fois)
-      const ids = Object.keys(liste).filter((id) => baseDuSite(id) === base);
+      // Les sites rangés dans cette base (un site déclaré avec une autre base n'est pas compté deux fois)
+      const ids = Object.keys(liste).filter((id) => !SITES[id] || baseDuSite(id) === base);
       await Promise.all(ids.map(async (id) => {
         const [j, m, t] = await Promise.all([
           lire(base, `stats/${id}/jours`, { orderBy: '"$key"', startAt: `"${debut}"` }),
@@ -370,7 +370,7 @@ async function charger() {
       problemes.push({ base, refus: e instanceof Refus });
     }
   }));
-  if (problemes.length === BASES.length) throw problemes.some((p) => p.refus) ? new Refus() : new Error('hors ligne');
+  if (BASES.length && problemes.length === BASES.length) throw problemes.some((p) => p.refus) ? new Refus() : new Error('hors ligne');
   donnees = nouvelles;
 }
 
