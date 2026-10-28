@@ -1,9 +1,3 @@
-// Réglages du tableau de bord.
-
-// Base commune : celle où vont les chiffres des sites qui n'indiquent pas leur propre base
-// (la même que la constante BASE au début de suivi.js). Les sites qui ont leur propre base
-// l'indiquent avec « base » ci-dessous (et data-base dans leur balise de suivi.js).
-export const BASE = 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app';
 
 // Toutes les combien de secondes le tableau va chercher les nouveaux chiffres
 export const ACTUALISATION = 60;
@@ -20,7 +14,7 @@ export const SITES = {
   jeux: {
     nom: 'Jeux',
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
+    adresse: 'https://kciol.github.io/Games/', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
     couleur: '#F2B632',
     pages: {
       accueil: 'Menu', uno: 'UNO', skyjo: 'Skyjo', blackjack: 'Blackjack', poker: 'Poker',
