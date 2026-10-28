@@ -1,11 +1,13 @@
+// Réglages du tableau de bord.
 
 // Toutes les combien de secondes le tableau va chercher les nouveaux chiffres
 export const ACTUALISATION = 60;
 
-// Noms affichés pour chaque site (la clé = le data-site mis dans la balise de suivi.js).
-// Un site qui n'est pas listé ici apparaît quand même, avec son identifiant comme nom.
-//   base     : adresse de la Realtime Database du site, s'il range ses chiffres dans sa propre base
-//              (la même que data-base dans sa balise de suivi.js). Sans « base » : la base commune.
+// Les sites affichés (la clé = le data-site mis dans la balise de suivi.js du site).
+// Le tableau va lire les chiffres de chaque site dans sa base, puis les additionne lui-même
+// pour la vue « Tous les sites ».
+//   base     : adresse de la Realtime Database du site (la même que data-base dans sa balise
+//              de suivi.js)   ← obligatoire
 //   nom      : nom affiché
 //   adresse  : adresse du site (facultatif) : sert au lien « Ouvrir » et au lien « Ne pas me compter »
 //   couleur  : couleur du site dans la vue « Tous les sites » (facultatif)
@@ -14,7 +16,7 @@ export const SITES = {
   jeux: {
     nom: 'Jeux',
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: 'https://kciol.github.io/Games/', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
+    adresse: '', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
     couleur: '#F2B632',
     pages: {
       accueil: 'Menu', uno: 'UNO', skyjo: 'Skyjo', blackjack: 'Blackjack', poker: 'Poker',
@@ -22,6 +24,16 @@ export const SITES = {
       bataille: 'Bataille navale', chevaux: 'Petits chevaux', puissance4: 'Puissance 4',
       tokyo: 'Monopoly', cluedo: 'Cluedo', mastermind: 'Mastermind', demineur: 'Démineur',
       loupgarou: 'Loup-Garou', undercover: 'Undercover', petitbac: 'Petit bac',
+    },
+  },
+  pyrolos: {
+    nom: 'Pyrolos',
+    base: 'https://pyrolos-default-rtdb.europe-west1.firebasedatabase.app',
+    adresse: '', // par exemple 'https://ton-pseudo.github.io/Pyrolos/'
+    couleur: '#4F8DE0',
+    pages: {
+      carte: 'Carte', itineraires: 'Itinéraires', riders: 'Rouler ensemble', messages: 'Messages',
+      meteo: 'Météo', classement: 'Classement', succes: 'Succès',
     },
   },
   // Exemple pour un autre site qui a sa propre base :

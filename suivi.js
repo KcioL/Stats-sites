@@ -3,9 +3,8 @@
  * Installation dans un site : copier ce fichier à la racine du site, puis ajouter dans chaque page
  *   <script src="suivi.js" data-site="nom-du-site" data-base="https://….firebasedatabase.app" defer></script>
  * (avec le bon chemin, par exemple ../suivi.js dans un sous-dossier). « nom-du-site » : 2 à 30
- * caractères parmi a-z, 0-9 et « - ». data-base : adresse de la Realtime Database du site où ranger
- * les chiffres (facultatif : sans data-base, ils vont dans la base commune BASE ci-dessous).
- * Cette base doit avoir les règles « stats » (voir regles-stats.txt du tableau de bord).
+ * caractères parmi a-z, 0-9 et « - ». data-base : adresse de la Realtime Database du site, où ranger
+ * les chiffres. Cette base doit avoir les règles « stats » (voir regles-stats.txt du tableau de bord).
  *
  * Rien de personnel n'est envoyé : pas d'adresse IP enregistrée, pas d'identifiant. Chaque appareil
  * retient seulement (dans son navigateur) le jour et le mois où il a déjà été compté, pour compter
@@ -17,21 +16,21 @@
  *   stats/<site>/total              visiteurs, vues
  *
  * <page> = premier dossier de l'adresse sous la racine du site (« uno » pour /uno/), ou « accueil ».
- * La racine du site est le dossier qui contient ce fichier.
+ * La racine du site est le dossier qui contient ce fichier. Pour un site d'une seule page à onglets :
+ *   - data-page="carte" sur la balise donne le nom de la page affichée à l'ouverture ;
+ *   - window.suivi.page('itineraires') compte le passage sur un autre onglet (une page vue de plus,
+ *     et un visiteur de plus pour cet onglet s'il ne l'avait pas encore ouvert ce jour-là).
  *
  * Pas compté : localhost, hors connexion, et un appareil où l'on a ouvert le site avec ?suivi=off
  * (?suivi=on pour annuler).
  */
 (() => {
-  // Base commune : reçoit les chiffres des sites qui n'indiquent pas data-base
-  // (la même que BASE dans config.js du tableau de bord)
-  const BASE_COMMUNE = 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app';
   const FUSEAU = 'Europe/Paris';
 
   const script = document.currentScript;
   const site = script && script.dataset.site;
   if (!site || !/^[a-z0-9-]{2,30}$/.test(site)) return;
-  const BASE = (script.dataset.base || BASE_COMMUNE).trim().replace(/\/+$/, '');
+  const BASE = (script.dataset.base || '').trim().replace(/\/+$/, '');
   if (!/^https:\/\/[a-z0-9.-]+\.(firebasedatabase\.app|firebaseio\.com)$/.test(BASE)) return;
   const racine = new URL('.', script.src).pathname;
   const CLE = `suivi:${site}`;
@@ -56,15 +55,21 @@
     return `${p.year}-${p.month}-${p.day}`;
   }
 
+  const nettoyer = (nom) => {
+    const p = String(nom || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\.html?$/, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+    return p.length >= 2 && p !== 'index' ? p : '';
+  };
+
   function pageActuelle() {
+    if (script.dataset.page) return nettoyer(script.dataset.page) || 'accueil';
     const chemin = location.pathname.startsWith(racine) ? location.pathname.slice(racine.length) : '';
-    let page = decodeURIComponent(chemin.split('/')[0] || '').toLowerCase().replace(/\.html?$/, '');
-    if (!page || page === 'index') return 'accueil';
-    page = page.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
-    return page.length >= 2 ? page : 'accueil';
+    let premier = '';
+    try { premier = decodeURIComponent(chemin.split('/')[0] || ''); } catch (e) { /* adresse mal formée */ }
+    return nettoyer(premier) || 'accueil';
   }
 
-  function compter() {
+  function compter(page) {
     if (location.protocol === 'file:' || ['localhost', '127.0.0.1', ''].includes(location.hostname)) return;
     if (!navigator.onLine) return;
     const memoire = stockage();
@@ -72,7 +77,6 @@
 
     const jour = jourDe(new Date());
     const mois = jour.slice(0, 7);
-    const page = pageActuelle();
     const s = `stats/${site}`;
     const d = `${s}/jours/${jour}`;
     const un = { '.sv': { increment: 1 } };
@@ -105,7 +109,20 @@
     fetch(`${BASE}/.json`, { method: 'PATCH', body: JSON.stringify(maj), keepalive: true }).catch(() => {});
   }
 
-  const lancer = () => setTimeout(compter, 1500);
+  // Première page : comptée un peu après l'ouverture, pour ne pas ralentir le site
+  let pageInitiale = pageActuelle();
+  let lance = false;
+  const lancer = () => setTimeout(() => { lance = true; compter(pageInitiale); }, 1500);
   if (document.readyState === 'complete') lancer();
   else addEventListener('load', lancer, { once: true });
+
+  // Onglets d'un site d'une seule page : window.suivi.page('nom-de-l-onglet')
+  window.suivi = {
+    page(nom) {
+      const page = nettoyer(nom);
+      if (!page) return;
+      if (!lance) { pageInitiale = page; return; } // pas encore compté : c'est cette page qui le sera
+      compter(page);
+    },
+  };
 })();

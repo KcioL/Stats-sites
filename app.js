@@ -429,8 +429,8 @@ function remplirDemo() {
   const modeles = {
     jeux: { base: 8, pente: 0.09, weekend: 1.6, appli: 0.22, mobile: 0.72,
       pages: { accueil: 12, uno: 9, skyjo: 7, loupgarou: 6, undercover: 5, president: 5, petitbac: 4, poker: 4, cranes: 3, bataille: 3, puissance4: 3, tokyo: 2, kassen: 2, cluedo: 2, chevaux: 2, blackjack: 2, demineur: 1.5, mastermind: 1 } },
-    portfolio: { base: 5, pente: 0.02, weekend: 0.6, appli: 0, mobile: 0.45,
-      pages: { accueil: 10, projets: 6, 'a-propos': 3, contact: 2 } },
+    pyrolos: { base: 6, pente: 0.03, weekend: 1.8, appli: 0.05, mobile: 0.6,
+      pages: { carte: 10, itineraires: 6, meteo: 5, classement: 3, riders: 2, messages: 2, succes: 1.5 } },
   };
   const tous = derniersJours(400);
   const aujourdhui = jourDe();
