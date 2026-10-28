@@ -16,7 +16,7 @@ export const SITES = {
   jeux: {
     nom: 'Jeux',
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
+    adresse: 'https://kciol.github.io/Games/', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
     couleur: '#F2B632',
     pages: {
       accueil: 'Menu', uno: 'UNO', skyjo: 'Skyjo', blackjack: 'Blackjack', poker: 'Poker',
@@ -29,7 +29,7 @@ export const SITES = {
   pyrolos: {
     nom: 'Pyrolos',
     base: 'https://pyrolos-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/Pyrolos/'
+    adresse: 'https://kciol.github.io/Pyrolos/', // par exemple 'https://ton-pseudo.github.io/Pyrolos/'
     couleur: '#4F8DE0',
     pages: {
       carte: 'Carte', itineraires: 'Itinéraires', riders: 'Rouler ensemble', messages: 'Messages',
