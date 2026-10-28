@@ -36,6 +36,13 @@ export const SITES = {
       meteo: 'Météo', classement: 'Classement', succes: 'Succès',
     },
   },
+  mangazone: {
+    nom: 'MangaZone',
+    base: 'https://manga-2a40b-default-rtdb.europe-west1.firebasedatabase.app',
+    adresse: 'https://kciol.github.io/MangaZone/', // par exemple 'https://ton-pseudo.github.io/MangaZone/'
+    couleur: '#F0697C',
+    pages: { discover: 'Découvrir', collection: 'Collection', succes: 'Succès', series: 'Fiche d’une série' },
+  },
   // Exemple pour un autre site qui a sa propre base :
   // portfolio: {
   //   nom: 'Portfolio',
