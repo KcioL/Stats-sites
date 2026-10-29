@@ -18,6 +18,8 @@ export const FOND = 'fond.jpg';
 //   logo     : image ronde affichée dans la barre de gauche (fichier du dossier logos/, ou adresse https://)
 //   icone    : lettre ou emoji affiché à la place, s'il n'y a pas de logo (facultatif : 1re lettre du nom)
 //   parties  : true pour un site de jeux : le classement peut trier les jeux par parties jouées
+//   actions  : noms affichés des autres actions comptées par le site, au singulier et au pluriel
+//              (ex. téléchargements) ; les « parties » ont déjà leur affichage
 //   pages    : noms affichés des pages (clé = premier dossier de l'adresse, « accueil » pour la page d'accueil)
 export const SITES = {
   jeux: {
@@ -65,10 +67,25 @@ export const SITES = {
       fiche: 'Fiche d’un anime', profil: 'Profil d’un membre',
     },
   },
-  // Exemple pour un autre site qui a sa propre base :
-  // portfolio: {
-  //   nom: 'Portfolio',
+  portfolio: {
+    logo: 'logos/portfolio.png',
+    nom: 'Portfolio',
+    // pas de base à lui : ses chiffres sont rangés dans celle du site de jeux
+    base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
+    adresse: 'https://kciol.github.io/Portfolio/', // par exemple 'https://ton-pseudo.github.io/Portfolio/'
+    couleur: '#00EEFF',
+    pages: {
+      accueil: 'Accueil', 'a-propos': 'À propos', projets: 'Projets', cv: 'CV', contact: 'Contact',
+      'projet-vba': 'Projet · Reporting RH VBA', 'projet-r': 'Projet · Clustering R',
+      'projet-twitch': 'Projet · Analyse Data Twitch', 'projet-cook': 'Projet · App Cook & Save',
+      'projet-nutri': 'Projet · Analyse nutritionnelle', 'projet-web': 'Projet · Projet Web', stage: 'Projet · Stage',
+    },
+    actions: { telechargements: ['téléchargement', 'téléchargements'] },
+  },
+  // Exemple pour un nouveau site qui a sa propre base :
+  // monsite: {
+  //   nom: 'Mon site',
   //   base: 'https://mon-projet-default-rtdb.europe-west1.firebasedatabase.app',
-  //   adresse: 'https://ton-pseudo.github.io/portfolio/',
+  //   adresse: 'https://ton-pseudo.github.io/monsite/',
   // },
 };

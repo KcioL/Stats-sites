@@ -199,7 +199,9 @@ function rendre() {
       const txtParties = `<span class="parties">${nf.format(nbParties)} partie${nbParties > 1 ? 's' : ''}</span>`;
       const txtVisiteurs = `${nf.format(nbVisiteurs)} visiteur${nbVisiteurs > 1 ? 's' : ''}`;
       // sur un site de jeux, chaque jeu affiche toujours ses parties (même 0)
-      const sous = parParties ? txtVisiteurs : `${txtVisiteurs}${(nbParties || (jeuxDuSite && cle !== 'accueil')) ? ` · ${txtParties}` : ''}`;
+      const autres = tous ? {} : autresActions(cles, cle);
+      const txtAutres = Object.entries(autres).map(([a, n]) => ` · <span class="parties">${nf.format(n)} ${echapper(nomAction(a, n))}</span>`).join('');
+      const sous = (parParties ? txtVisiteurs : `${txtVisiteurs}${(nbParties || (jeuxDuSite && cle !== 'accueil')) ? ` · ${txtParties}` : ''}`) + txtAutres;
       return `<li data-cle="${echapper(cle)}" tabindex="0" role="button" title="${echapper(titre)}" style="--accent:${accent}">
         <span class="rang">${String(i + 1).padStart(2, '0')}</span>
         <span class="element">
@@ -424,6 +426,20 @@ function parties(cle, page, mode = null) {
 const partiesMois = (m, page) => Object.keys(jours).filter((c) => c.startsWith(m)).reduce((s, c) => s + parties(c, page), 0);
 const visiteursPage = (cle, page) => (jours[cle] && jours[cle].pages && jours[cle].pages[page]) || 0;
 const visiteursPageMois = (m, page) => Object.keys(jours).filter((c) => c.startsWith(m)).reduce((s, c) => s + visiteursPage(c, page), 0);
+// Autres actions (téléchargements…) : total par action pour une page, sur des jours donnés
+function autresActions(cles, page) {
+  const res = {};
+  for (const c of cles) for (const [a, parPage] of Object.entries((jours[c] && jours[c].actions) || {})) {
+    if (!estPartie(a) && parPage && parPage[page]) res[a] = (res[a] || 0) + parPage[page];
+  }
+  return res;
+}
+function nomAction(a, nb) {
+  const n = SITES[selection] && SITES[selection].actions && SITES[selection].actions[a];
+  if (Array.isArray(n)) return nb > 1 ? n[1] : n[0];
+  return n || a.replace(/-/g, ' ');
+}
+
 // Site qui compte des parties : « parties: true » dans config.js, ou des parties déjà dans ses chiffres
 function avecParties(id) {
   if (!id || id === 'tous') return false;
@@ -484,6 +500,11 @@ function rendreFiche(animerFiche = false) {
       ["Parties aujourd'hui", parties(aujourdhui, page), `hier : ${nf.format(parties(decaler(aujourdhui, -1), page))}`],
     ] : []),
   ];
+  for (const [a, n] of Object.entries(autresActions(cles, page))) {
+    const auj = autresActions([aujourdhui], page)[a] || 0;
+    const lib = nomAction(a, 2);
+    stats.push([lib.charAt(0).toUpperCase() + lib.slice(1), n, `aujourd'hui : ${nf.format(auj)}`]);
+  }
   $('fiche-chiffres').innerHTML = stats.map(([lib, val, note]) => `<div class="mini"><span>${lib}</span><strong>${nf.format(val)}</strong>${note ? `<small>${note}</small>` : ''}</div>`).join('');
 
   // Répartition par mode (en ligne / sur un seul téléphone)
