@@ -138,7 +138,7 @@ function rendre() {
       cle: m, valeur: valMois(m), actuelle: i === 11,
       etiquette: fmt(m, { month: 'short' }).replace('.', ''),
       titre: fmt(m, { month: 'long', year: 'numeric' }),
-      detail: `${nf.format(sommeMois(m, 'vues'))} pages vues`,
+      detail: `${nf.format(sommeMois(m, 'vues'))} pages vues`, clic: true,
     })), 'mois');
   } else {
     graphe(cles.map((c, i) => ({
@@ -146,7 +146,7 @@ function rendre() {
       etiquette: c === aujourdhui ? 'Auj.' : periode === '7' ? fmt(c, { weekday: 'short' }).replace('.', '')
         : ((n - 1 - i) % 5 === 0 ? fmt(c, { day: 'numeric' }) : ''),
       titre: c === aujourdhui ? "Aujourd'hui" : fmt(c, { weekday: 'long', day: 'numeric', month: 'long' }),
-      detail: `${nf.format(v(c, 'vues'))} pages vues`,
+      detail: `${nf.format(v(c, 'vues'))} pages vues`, clic: true,
     })), 'jour');
   }
 
@@ -247,6 +247,7 @@ function rendre() {
   $('t-parties-ligne').hidden = !nbTotalParties && !avecParties(selection);
   $('t-parties').textContent = nf.format(nbTotalParties);
   rendreFiche();
+  rendreJour();
   const meilleur = Object.keys(jours).reduce((m, c) => (v(c, 'visiteurs') > v(m, 'visiteurs') ? c : m), aujourdhui);
   $('t-record').innerHTML = v(meilleur, 'visiteurs')
     ? `${nf.format(v(meilleur, 'visiteurs'))}<small>${fmt(meilleur, { day: 'numeric', month: 'long', year: 'numeric' })}</small>` : '–';
@@ -413,7 +414,7 @@ function brancherBulle(zone) {
     const [un, plusieurs] = p.unite || ['visiteur', 'visiteurs'];
     zone.querySelectorAll('.colonne.active').forEach((c) => c.classList.remove('active'));
     col.classList.add('active');
-    bulle.innerHTML = `<span>${p.titre}</span><strong>${nf.format(p.valeur)} ${p.valeur > 1 ? plusieurs : un}</strong>${p.detail ? `<span>${p.detail}</span>` : ''}`;
+    bulle.innerHTML = `<span>${p.titre}</span><strong>${nf.format(p.valeur)} ${p.valeur > 1 ? plusieurs : un}</strong>${p.detail ? `<span>${p.detail}</span>` : ''}${p.clic ? '<em>Clique pour le détail</em>' : ''}`;
     bulle.hidden = false;
     const rz = zone.getBoundingClientRect();
     const rb = col.querySelector('.barre-v').getBoundingClientRect();
@@ -574,6 +575,166 @@ function rendreFiche(animerFiche = false) {
 }
 
 $('fiche-fermer').addEventListener('click', () => $('fiche').close());
+
+// ---------- Détail d'un jour (ou d'un mois) : clic sur une barre du graphique principal ----------
+let jourOuvert = null;   // 'AAAA-MM-JJ' ou 'AAAA-MM'
+
+function ouvrirJour(cle) {
+  jourOuvert = cle;
+  rendreJour(true);
+  if (!$('jour').open) $('jour').showModal();
+}
+
+// Totaux d'actions sur des jours donnés, dans un objet « jours » (d'un site, ou de la vue)
+function actionsDans(objJours, cles) {
+  const parties = {}; const autres = {}; let nbParties = 0; const modes = {};
+  for (const c of cles) for (const [a, parPage] of Object.entries((objJours[c] && objJours[c].actions) || {})) {
+    for (const [pg, n] of Object.entries(parPage || {})) {
+      if (estPartie(a)) { parties[pg] = (parties[pg] || 0) + n; nbParties += n; modes[a] = (modes[a] || 0) + n; }
+      else { (autres[a] = autres[a] || {})[pg] = (autres[a][pg] || 0) + n; }
+    }
+  }
+  return { parties, autres, nbParties, modes };
+}
+
+function rendreJour(forcer = false) {
+  const dlg = $('jour');
+  if (!jourOuvert || (!dlg.open && !forcer)) return;
+  const cle = jourOuvert;
+  const enMois = cle.length === 7;
+  const aujourdhui = jourDe();
+  const cles = enMois ? Object.keys(jours).filter((c) => c.startsWith(cle)) : [cle];
+  const tous = selection === 'tous';
+
+  $('jour-site').textContent = `${tous ? 'Tous les sites' : nomSite(selection)} · ${enMois ? 'détail du mois' : 'détail du jour'}`;
+  $('jour-titre').textContent = enMois ? fmt(cle, { month: 'long', year: 'numeric' })
+    : cle === aujourdhui ? `Aujourd'hui · ${fmt(cle, { day: 'numeric', month: 'long' })}` : fmt(cle, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  // flèches : pas après aujourd'hui / ce mois-ci
+  const [an, mo] = cle.split('-').map(Number);
+  const suivant = enMois ? new Date(Date.UTC(an, mo, 1)).toISOString().slice(0, 7) : decaler(cle, 1);
+  $('jour-apres').disabled = enMois ? suivant > aujourdhui.slice(0, 7) : suivant > aujourdhui;
+
+  // Chiffres du jour
+  const visiteurs = enMois ? ((mois[cle] && mois[cle].visiteurs) || 0) : v(cle, 'visiteurs');
+  const somme2 = (champ) => cles.reduce((t, c) => t + v(c, champ), 0);
+  const stats = [
+    [enMois ? 'Visiteurs uniques du mois' : 'Visiteurs uniques', visiteurs, ''],
+    ['Pages vues', somme2('vues'), ''],
+    ['Nouveaux visiteurs', somme2('nouveaux'), ''],
+  ];
+  let act = { parties: {}, autres: {}, nbParties: 0, modes: {} };
+  if (tous) {
+    for (const d of Object.values(donnees)) {
+      const a = actionsDans(d.jours || {}, cles);
+      act.nbParties += a.nbParties;
+      for (const [m, n] of Object.entries(a.modes)) act.modes[m] = (act.modes[m] || 0) + n;
+      for (const [nom, parPage] of Object.entries(a.autres)) for (const [pg, n] of Object.entries(parPage)) ((act.autres[nom] = act.autres[nom] || {})[pg] = (act.autres[nom][pg] || 0) + n);
+    }
+  } else {
+    act = actionsDans(jours, cles);
+  }
+  if (act.nbParties || avecParties(selection)) {
+    const detailModes = Object.entries(act.modes).sort((x, y) => y[1] - x[1]).map(([m, n]) => `${nomMode(m).toLowerCase()} : ${nf.format(n)}`).join(' · ');
+    stats.push(['Parties jouées', act.nbParties, detailModes]);
+  }
+  for (const [nom, parPage] of Object.entries(act.autres)) {
+    const n = Object.values(parPage).reduce((t, x) => t + x, 0);
+    const lib = nomAction(nom, 2);
+    stats.push([lib.charAt(0).toUpperCase() + lib.slice(1), n, '']);
+  }
+  $('jour-chiffres').innerHTML = stats.map(([lib, val, note]) => `<div class="mini"><span>${lib}</span><strong>${nf.format(val)}</strong>${note ? `<small>${note}</small>` : ''}</div>`).join('');
+
+  // Détail : pages du site (ou sites, dans la vue « Tous les sites »)
+  let lignes;
+  if (tous) {
+    $('jour-titre-liste').textContent = 'Par site';
+    lignes = Object.entries(donnees).map(([id, d]) => {
+      const vis = cles.reduce((t, c) => t + ((d.jours && d.jours[c] && d.jours[c].visiteurs) || 0), 0);
+      const a = actionsDans(d.jours || {}, cles);
+      const sous = [];
+      if (a.nbParties) sous.push(`<span class="parties">${nf.format(a.nbParties)} partie${a.nbParties > 1 ? 's' : ''}</span>`);
+      return { cle: id, nom: nomSite(id), valeur: vis, sous, accent: couleurSite(id), poids: a.nbParties };
+    });
+  } else {
+    $('jour-titre-liste').textContent = avecParties(selection) ? 'Par jeu' : 'Par page';
+    const parPage = {};
+    for (const c of cles) for (const [pg, n] of Object.entries((jours[c] && jours[c].pages) || {})) parPage[pg] = (parPage[pg] || 0) + n;
+    const toutes = new Set([...Object.keys(parPage), ...Object.keys(act.parties), ...Object.values(act.autres).flatMap((o) => Object.keys(o))]);
+    lignes = [...toutes].map((pg) => {
+      const sous = [];
+      const np = act.parties[pg] || 0;
+      if (np || (avecParties(selection) && pg !== 'accueil')) sous.push(`<span class="parties">${nf.format(np)} partie${np > 1 ? 's' : ''}</span>`);
+      let poids = np;
+      for (const [nom, pp] of Object.entries(act.autres)) if (pp[pg]) { sous.push(`<span class="parties">${nf.format(pp[pg])} ${echapper(nomAction(nom, pp[pg]))}</span>`); poids += pp[pg]; }
+      return { cle: pg, nom: nomPage(pg), valeur: parPage[pg] || 0, sous, poids };
+    });
+  }
+  lignes.sort((a, b) => b.valeur - a.valeur || b.poids - a.poids);
+  const ACCENTS_J = ['#4F8DFF', '#F2B632', '#F0697C', '#9B7BEA', '#3FBF7F', '#2EC4C4', '#E58A3A'];
+  lignes.forEach((l, i) => { if (!tous) l.accent = ACCENTS_J[i % ACCENTS_J.length]; });
+  const max = Math.max(1, ...lignes.map((l) => l.valeur));
+  const liste = $('jour-liste');
+  liste.innerHTML = lignes.filter((l) => l.valeur || l.poids).length ? lignes.filter((l) => l.valeur || l.poids).map((l, i) => `
+    <li data-cle="${echapper(l.cle)}" tabindex="0" role="button" style="--accent:${l.accent}">
+      <span class="rang">${String(i + 1).padStart(2, '0')}</span>
+      <span class="element">
+        <span class="nom">${echapper(l.nom)}</span>
+        <span class="nombre">${nf.format(l.valeur)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+        <span class="sous">${nf.format(l.valeur)} visiteur${l.valeur > 1 ? 's' : ''}${l.sous.map((x) => ` · ${x}`).join('')}</span>
+        <span class="jauge"><i style="--l:${Math.max(2, (l.valeur / max) * 100)}%"></i></span>
+      </span></li>`).join('') : '<li class="vide" style="display:block">Aucune visite ce jour-là.</li>';
+  liste.scrollTop = 0;
+  requestAnimationFrame(() => {
+    liste.classList.toggle('suite-bas', liste.scrollTop + liste.clientHeight < liste.scrollHeight - 4);
+    liste.classList.remove('suite-haut');
+  });
+}
+
+function decalerJour(sens) {
+  if (!jourOuvert) return;
+  if (jourOuvert.length === 7) {
+    const [a, m] = jourOuvert.split('-').map(Number);
+    jourOuvert = new Date(Date.UTC(a, m - 1 + sens, 1)).toISOString().slice(0, 7);
+  } else {
+    jourOuvert = decaler(jourOuvert, sens);
+  }
+  rendreJour(true);
+}
+$('jour-avant').addEventListener('click', () => decalerJour(-1));
+$('jour-apres').addEventListener('click', () => decalerJour(1));
+$('jour-fermer').addEventListener('click', () => $('jour').close());
+$('jour').addEventListener('click', (e) => { if (e.target === $('jour')) $('jour').close(); });
+$('jour').addEventListener('close', () => { jourOuvert = null; });
+$('jour').addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') decalerJour(-1);
+  if (e.key === 'ArrowRight' && !$('jour-apres').disabled) decalerJour(1);
+});
+$('jour-liste').addEventListener('scroll', (e) => {
+  const l = e.currentTarget;
+  l.classList.toggle('suite-haut', l.scrollTop > 4);
+  l.classList.toggle('suite-bas', l.scrollTop + l.clientHeight < l.scrollHeight - 4);
+}, { passive: true });
+// Clic sur une ligne : fiche de la page (ou, dans la vue « Tous les sites », ce site)
+$('jour-liste').addEventListener('click', (e) => {
+  const li = e.target.closest('li[data-cle]');
+  if (!li) return;
+  $('jour').close();
+  if (selection === 'tous') {
+    selection = li.dataset.cle;
+    try { localStorage.setItem('tdb:site', selection); } catch (err) { /* stockage bloqué */ }
+    animer = true;
+    rendre();
+  } else {
+    ouvrirFiche(li.dataset.cle);
+  }
+});
+// Clic sur une barre du graphique principal
+$('graphe').addEventListener('click', (e) => {
+  const col = e.target.closest('.colonne');
+  if (!col) return;
+  const p = $('graphe').querySelector('.barres')._points[Number(col.dataset.i)];
+  if (p && p.clic) ouvrirJour(p.cle);
+});
 $('fiche').addEventListener('click', (e) => { if (e.target === $('fiche')) $('fiche').close(); }); // clic à côté
 $('fiche').addEventListener('close', () => { pageOuverte = null; });
 $('fiche-choix').addEventListener('click', (e) => {
@@ -755,6 +916,8 @@ function remplirDemo() {
       pages: { carte: 10, itineraires: 6, meteo: 5, classement: 3, riders: 2, messages: 2, succes: 1.5 } },
     mangazone: { base: 4, pente: 0.02, weekend: 1.3, appli: 0.35, mobile: 0.8,
       pages: { discover: 8, collection: 6, series: 5, succes: 2 } },
+    portfolio: { base: 3, pente: 0.01, weekend: 0.5, appli: 0, mobile: 0.4, telechargements: { cv: 0.5, 'projet-r': 0.3, 'projet-vba': 0.3, 'projet-twitch': 0.25 },
+      pages: { accueil: 10, 'a-propos': 7, projets: 6, cv: 4, contact: 2, 'projet-r': 2, 'projet-vba': 1.5, 'projet-twitch': 1.5, 'projet-web': 1 } },
     animezone: { base: 5, pente: 0.04, weekend: 1.4, appli: 0.3, mobile: 0.78,
       pages: { avenir: 8, decouvrir: 6, liste: 5, fiche: 5, profils: 2, succes: 2, profil: 1 } },
   };
@@ -783,6 +946,10 @@ function remplirDemo() {
           if (enLigne) actions['parties-en-ligne'][p] = enLigne;
           if (tot - enLigne > 0) actions['parties-telephone'][p] = tot - enLigne;
         }
+      }
+      if (mod.telechargements) {
+        actions = { telechargements: {} };
+        for (const [p, taux] of Object.entries(mod.telechargements)) { const nb = Math.round((pages[p] || 0) * taux * (0.5 + alea())); if (nb) actions.telechargements[p] = nb; }
       }
       j[c] = { visiteurs, vues: Math.round(visiteurs * (2.6 + alea() * 1.4)), nouveaux: Math.round(visiteurs * (0.3 + alea() * 0.2)),
         appli: Math.round(visiteurs * mod.appli * (0.8 + alea() * 0.4)), appareils: { mobile, ordi: visiteurs - mobile }, pages, actions };

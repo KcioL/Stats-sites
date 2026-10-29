@@ -190,6 +190,30 @@
     </footer>
   </main>
 
+  <!-- Détail d'un jour (ou d'un mois) : s'ouvre en cliquant sur une barre du graphique -->
+  <dialog class="fiche verre" id="jour" aria-labelledby="jour-titre">
+    <header class="fiche-entete">
+      <div>
+        <p class="note" id="jour-site"></p>
+        <h2 id="jour-titre">Jour</h2>
+      </div>
+      <div class="groupe">
+        <button type="button" class="rond verre" id="jour-avant" aria-label="Jour précédent" title="Jour précédent">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <button type="button" class="rond verre" id="jour-apres" aria-label="Jour suivant" title="Jour suivant">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+        <button type="button" class="rond verre" id="jour-fermer" aria-label="Fermer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="fiche-chiffres" id="jour-chiffres"></div>
+    <div class="fiche-graphe-entete"><h3 id="jour-titre-liste">Par page</h3></div>
+    <ol class="classement jour-liste" id="jour-liste"></ol>
+  </dialog>
+
   <!-- Fiche d'une page (ou d'un jeu) : s'ouvre en cliquant dans le classement -->
   <dialog class="fiche verre" id="fiche" aria-labelledby="fiche-titre">
     <header class="fiche-entete">
