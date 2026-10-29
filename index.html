@@ -5,8 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
   <title>Tableau de bord</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231c1c1e'/%3E%3Crect x='7' y='15' width='4' height='10' rx='2' fill='%23ffffff' fill-opacity='.55'/%3E%3Crect x='14' y='10' width='4' height='15' rx='2' fill='%23ffffff' fill-opacity='.55'/%3E%3Crect x='21' y='6' width='4' height='19' rx='2' fill='%234F8DFF'/%3E%3C/svg%3E">
-  <meta name="theme-color" content="#1c1c1e">
+  <link rel="icon" href="icones/favicon.ico" sizes="16x16 32x32 48x48 64x64">
+  <link rel="icon" type="image/svg+xml" href="icones/logo.svg">
+  <link rel="icon" type="image/png" href="icones/favicon-32.png" sizes="32x32">
+  <link rel="apple-touch-icon" href="icones/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#191414">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Stats">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -20,6 +28,7 @@
   <!-- Barre du haut -->
   <header class="haut">
     <div class="groupe">
+      <img class="logo-appli" src="icones/logo.svg" alt="Tableau de bord" width="40" height="40">
       <button type="button" class="rond verre" id="actualiser" title="Actualiser" aria-label="Actualiser">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
       </button>
@@ -126,6 +135,10 @@
           <div>
             <h2 id="titre-classement">Pages les plus vues</h2>
             <p class="note" id="note-classement"></p>
+          </div>
+          <div class="segment verre petit" id="choix-classement" role="tablist" aria-label="Classer par" hidden>
+            <button role="tab" data-tri="visiteurs" aria-selected="true">Visiteurs</button>
+            <button role="tab" data-tri="parties" aria-selected="false">Parties</button>
           </div>
         </header>
         <ol class="classement" id="classement"></ol>

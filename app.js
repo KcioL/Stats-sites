@@ -163,25 +163,43 @@ function rendre() {
     badge.hidden = true;
   }
 
-  // Classement : pages du site, ou sites entre eux
+  // Classement : pages du site, ou sites entre eux. Pour un site de jeux : par visiteurs ou par parties.
   const parCle = {};
   for (const c of cles) for (const [cle, nb] of Object.entries((jours[c] && jours[c].pages) || {})) parCle[cle] = (parCle[cle] || 0) + nb;
-  const tri = Object.entries(parCle).sort((a, b) => b[1] - a[1]);
-  $('titre-classement').textContent = tous ? 'Sites les plus visités' : 'Pages les plus vues';
-  $('note-classement').textContent = tous ? `Visiteurs uniques par jour, cumulés sur ${libPeriode}` : `Visiteurs par page, cumulés sur ${libPeriode}`;
+  const jeuxDuSite = avecParties(selection);
+  $('choix-classement').hidden = !jeuxDuSite;
+  $('choix-classement').querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tri === triClassement)));
+  const parParties = jeuxDuSite && triClassement === 'parties';
+  const partiesDe = (cle) => cles.reduce((t, j) => t + parties(j, cle), 0);
+  let tri;
+  if (parParties) {
+    // tous les jeux qui ont eu des visiteurs ou des parties (sauf la page d'accueil)
+    const toutes = new Set(Object.keys(parCle));
+    for (const c of cles) for (const parPage of Object.values((jours[c] && jours[c].actions) || {})) Object.keys(parPage || {}).forEach((pg) => toutes.add(pg));
+    tri = [...toutes].filter((cle) => cle !== 'accueil').map((cle) => [cle, partiesDe(cle)]).sort((a, b) => b[1] - a[1] || (parCle[b[0]] || 0) - (parCle[a[0]] || 0));
+  } else {
+    tri = Object.entries(parCle).sort((a, b) => b[1] - a[1]);
+  }
+  $('titre-classement').textContent = tous ? 'Sites les plus visités' : parParties ? 'Jeux les plus joués' : jeuxDuSite ? 'Jeux les plus ouverts' : 'Pages les plus vues';
+  $('note-classement').textContent = tous ? `Visiteurs uniques par jour, cumulés sur ${libPeriode}`
+    : parParties ? `Parties lancées sur ${libPeriode}` : `Visiteurs par page, cumulés sur ${libPeriode}`;
   const liste = $('classement');
   if (!tri.length) {
     liste.innerHTML = '<li class="vide" style="display:block">Pas encore de visites sur cette période.</li>';
   } else {
-    const max = tri[0][1];
+    const max = Math.max(1, tri[0][1]);
     const top = tri.slice(0, 7);
     const reste = tri.length - top.length;
     const ACCENTS = ['#4F8DFF', '#F2B632', '#F0697C', '#9B7BEA', '#3FBF7F', '#2EC4C4', '#E58A3A'];
     liste.innerHTML = top.map(([cle, nb], i) => {
       const accent = tous ? couleurSite(cle) : ACCENTS[i % ACCENTS.length];
-      const nbParties = tous ? 0 : cles.reduce((t, j) => t + parties(j, cle), 0);
+      const nbParties = tous ? 0 : partiesDe(cle);
+      const nbVisiteurs = parParties ? (parCle[cle] || 0) : nb;
       const titre = tous ? `Voir ${nomSite(cle)}` : `Détail : ${nomPage(cle)}`;
-      const sous = `${nf.format(nb)} visiteur${nb > 1 ? 's' : ''}${nbParties ? ` · <span class="parties">${nf.format(nbParties)} partie${nbParties > 1 ? 's' : ''}</span>` : ''}`;
+      const txtParties = `<span class="parties">${nf.format(nbParties)} partie${nbParties > 1 ? 's' : ''}</span>`;
+      const txtVisiteurs = `${nf.format(nbVisiteurs)} visiteur${nbVisiteurs > 1 ? 's' : ''}`;
+      // sur un site de jeux, chaque jeu affiche toujours ses parties (même 0)
+      const sous = parParties ? txtVisiteurs : `${txtVisiteurs}${(nbParties || (jeuxDuSite && cle !== 'accueil')) ? ` · ${txtParties}` : ''}`;
       return `<li data-cle="${echapper(cle)}" tabindex="0" role="button" title="${echapper(titre)}" style="--accent:${accent}">
         <span class="rang">${String(i + 1).padStart(2, '0')}</span>
         <span class="element">
@@ -216,7 +234,7 @@ function rendre() {
   $('t-visiteurs').textContent = nf.format(total.visiteurs || 0);
   $('t-vues').textContent = nf.format(total.vues || 0);
   const nbTotalParties = tous ? 0 : totalParties();
-  $('t-parties-ligne').hidden = !nbTotalParties;
+  $('t-parties-ligne').hidden = !nbTotalParties && !avecParties(selection);
   $('t-parties').textContent = nf.format(nbTotalParties);
   rendreFiche();
   const meilleur = Object.keys(jours).reduce((m, c) => (v(c, 'visiteurs') > v(m, 'visiteurs') ? c : m), aujourdhui);
@@ -406,6 +424,22 @@ function parties(cle, page, mode = null) {
 const partiesMois = (m, page) => Object.keys(jours).filter((c) => c.startsWith(m)).reduce((s, c) => s + parties(c, page), 0);
 const visiteursPage = (cle, page) => (jours[cle] && jours[cle].pages && jours[cle].pages[page]) || 0;
 const visiteursPageMois = (m, page) => Object.keys(jours).filter((c) => c.startsWith(m)).reduce((s, c) => s + visiteursPage(c, page), 0);
+// Site qui compte des parties : « parties: true » dans config.js, ou des parties déjà dans ses chiffres
+function avecParties(id) {
+  if (!id || id === 'tous') return false;
+  if (SITES[id] && SITES[id].parties) return true;
+  const actions = (donnees[id] && donnees[id].total && donnees[id].total.actions) || {};
+  return Object.keys(actions).some(estPartie);
+}
+let triClassement = 'visiteurs';
+$('choix-classement').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tri]');
+  if (!b) return;
+  triClassement = b.dataset.tri;
+  animer = true;
+  rendre();
+});
+
 function totalParties() {
   let n = 0;
   for (const [a, parPage] of Object.entries((total && total.actions) || {})) if (estPartie(a)) for (const nb of Object.values(parPage || {})) n += nb;
@@ -435,7 +469,7 @@ function rendreFiche(animerFiche = false) {
   const libPeriode = periode === '12m' ? '12 mois' : `${periode} jours`;
 
   const nbParties = cles.reduce((s, c) => s + parties(c, page), 0);
-  const aDesParties = nbParties > 0 || Object.keys(jours).some((c) => parties(c, page) > 0);
+  const aDesParties = (avecParties(selection) && page !== 'accueil') || nbParties > 0 || Object.keys(jours).some((c) => parties(c, page) > 0);
   if (!serieFiche) serieFiche = aDesParties ? 'parties' : 'visiteurs';
 
   $('fiche-site').textContent = nomSite(selection);
