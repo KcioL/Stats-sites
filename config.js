@@ -35,6 +35,7 @@ export const SITES = {
       bataille: 'Bataille navale', chevaux: 'Petits chevaux', puissance4: 'Puissance 4',
       tokyo: 'Monopoly', cluedo: 'Cluedo', mastermind: 'Mastermind', demineur: 'Démineur',
       loupgarou: 'Loup-Garou', undercover: 'Undercover', petitbac: 'Petit bac',
+      yams: 'Yam’s',
     },
   },
   pyrolos: {
