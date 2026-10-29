@@ -806,6 +806,12 @@ $('exporter').addEventListener('click', () => {
   setTimeout(() => { URL.revokeObjectURL(lien.href); lien.remove(); }, 1000);
 });
 
+// Barre du haut : fond en verre dès qu'on a fait défiler la page
+const barreHaut = document.querySelector('.haut');
+const majBarreHaut = () => barreHaut.classList.toggle('defile', scrollY > 8);
+addEventListener('scroll', majBarreHaut, { passive: true });
+majBarreHaut();
+
 // Pilules du haut : la section visible est mise en avant
 const pilules = [...document.querySelectorAll('.pilule[data-section]')];
 const activerPilule = (nom) => pilules.forEach((p) => p.classList.toggle('actif', p.dataset.section === nom));

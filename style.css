@@ -77,7 +77,19 @@ svg { flex: none; }
   position: sticky; top: 0; z-index: 20;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   padding: 14px 20px;
+  /* sous l'heure et l'appareil photo d'un téléphone (appli installée en plein écran) : on descend */
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
 }
+/* Bandeau en verre : la barre du haut prend un fond flouté dès qu'on fait défiler (classe posée par
+   app.js), et tout le temps sur téléphone, où elle passe aussi derrière l'heure et l'appareil photo */
+.haut { transition: background .3s, border-color .3s, box-shadow .3s; border-bottom: 1px solid transparent; }
+.haut.defile {
+  background: rgba(22, 20, 20, .5);
+  -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
+  border-bottom-color: rgba(255, 255, 255, .09);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, .7);
+}
+.haut.defile::before { display: none; }
 .haut::before { /* léger voile pour que la barre reste lisible quand on fait défiler */
   content: ""; position: absolute; inset: 0 0 -20px; z-index: -1; pointer-events: none;
   background: linear-gradient(180deg, rgba(0, 0, 0, .35), rgba(0, 0, 0, 0));
@@ -378,7 +390,13 @@ svg { flex: none; }
 /* ---------- Téléphone : la barre des sites passe en bas ---------- */
 @media (max-width: 760px) {
   body { font-size: 14px; }
-  .haut { padding: 10px 12px; grid-template-columns: auto 1fr auto; }
+  .haut { padding: 10px 12px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); grid-template-columns: auto 1fr auto; }
+  .haut {
+    background: rgba(22, 20, 20, .5);
+    -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
+    border-bottom-color: rgba(255, 255, 255, .09);
+  }
+  .haut::before { display: none; }
   .pilules { justify-content: center; gap: 6px; }
   .direct span { display: none; }
   .direct { padding: 0; width: 40px; justify-content: center; }
@@ -389,7 +407,7 @@ svg { flex: none; }
   .dock::-webkit-scrollbar { display: none; }
   .dock .separateur { width: 1px; height: 24px; margin: auto 0; }
   .dock .info { display: none; }
-  .page { padding: 8px 12px 110px; }
+  .page { padding: 8px max(12px, env(safe-area-inset-right)) 110px max(12px, env(safe-area-inset-left)); }
   .titre-page { margin-bottom: 16px; }
   .actions-titre { width: 100%; }
   .segment { flex: 1; }
