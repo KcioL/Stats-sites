@@ -195,8 +195,7 @@ function rendre() {
     liste.innerHTML = '<li class="vide" style="display:block">Pas encore de visites sur cette période.</li>';
   } else {
     const max = Math.max(1, tri[0][1]);
-    const top = tri.slice(0, 7);
-    const reste = tri.length - top.length;
+    const top = tri; // toute la liste : elle défile dans la carte
     const ACCENTS = ['#4F8DFF', '#F2B632', '#F0697C', '#9B7BEA', '#3FBF7F', '#2EC4C4', '#E58A3A'];
     liste.innerHTML = top.map(([cle, nb], i) => {
       const accent = tous ? couleurSite(cle) : ACCENTS[i % ACCENTS.length];
@@ -215,9 +214,11 @@ function rendre() {
           <span class="nom">${echapper(nomPage(cle))}</span>
           <span class="nombre">${nf.format(nb)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
           <span class="sous">${sous}</span>
-          <span class="jauge"><i style="--l:${Math.max(2, (nb / max) * 100)}%; --retard:${i * 70}ms"></i></span>
+          <span class="jauge"><i style="--l:${Math.max(2, (nb / max) * 100)}%; --retard:${Math.min(i, 10) * 70}ms"></i></span>
         </span></li>`;
-    }).join('') + (reste ? `<li class="reste">et ${reste} autre${reste > 1 ? 's' : ''}</li>` : '');
+    }).join('');
+    liste.scrollTop = 0;
+    requestAnimationFrame(majFondusListe);
   }
 
   // Appareils
@@ -269,6 +270,14 @@ function rendre() {
     grille._fin = setTimeout(() => grille.classList.remove('apparait'), 1200);
   }
 }
+
+// Liste des pages qui défile : fondu en haut / en bas tant qu'il reste des lignes à voir
+function majFondusListe() {
+  const l = $('classement');
+  l.classList.toggle('suite-haut', l.scrollTop > 4);
+  l.classList.toggle('suite-bas', l.scrollTop + l.clientHeight < l.scrollHeight - 4);
+}
+$('classement').addEventListener('scroll', majFondusListe, { passive: true });
 
 // Barre des sites, à gauche
 const ICONE_TOUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>';

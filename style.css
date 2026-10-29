@@ -162,7 +162,7 @@ svg { flex: none; }
 .grille { display: grid; gap: 16px; grid-template-columns: repeat(12, minmax(0, 1fr)); }
 .kpi { grid-column: span 3; }
 .principal { grid-column: span 8; display: flex; flex-direction: column; }
-.pages { grid-column: span 4; }
+.pages { grid-column: span 4; display: flex; flex-direction: column; }
 .appareils, .appli, .total { grid-column: span 4; }
 
 .carte { border-radius: var(--rayon); padding: 18px 20px; position: relative; transition: transform .35s cubic-bezier(.2, .8, .2, 1), box-shadow .35s, background .35s; }
@@ -247,7 +247,24 @@ svg { flex: none; }
 .tableau-donnees td + td, .tableau-donnees th + th { text-align: right; }
 
 /* ---------- Classement (pages ou sites) ---------- */
-.classement { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.classement {
+  list-style: none; display: flex; flex-direction: column; gap: 10px;
+  max-height: 640px; overflow-y: auto; overscroll-behavior: contain; /* environ 7 lignes, puis on fait défiler */
+  margin-right: -10px; padding-right: 10px; /* place pour la barre de défilement */
+  padding-bottom: 4px;
+  /* fondus en haut et en bas quand il reste de la liste à voir (classes posées par app.js) */
+  --fondu-haut: 0px; --fondu-bas: 0px;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-haut), #000 calc(100% - var(--fondu-bas)), transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 var(--fondu-haut), #000 calc(100% - var(--fondu-bas)), transparent);
+  scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent;
+}
+/* Barre de défilement en verre, fine et arrondie */
+.classement::-webkit-scrollbar { width: 6px; }
+.classement.suite-haut { --fondu-haut: 28px; }
+.classement.suite-bas { --fondu-bas: 36px; }
+.classement::-webkit-scrollbar-track { background: rgba(255, 255, 255, .04); border-radius: 999px; margin: 4px 0; }
+.classement::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .26); border-radius: 999px; border: 1px solid rgba(255, 255, 255, .12); }
+.classement::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .42); }
 .classement li[data-cle] {
   display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; cursor: pointer;
 }
@@ -338,6 +355,7 @@ svg { flex: none; }
 @media (max-width: 1100px) {
   .kpi { grid-column: span 6; }
   .principal, .pages { grid-column: 1 / -1; }
+  .classement { max-height: 460px; }
   .appareils, .appli { grid-column: span 6; }
   .total { grid-column: 1 / -1; }
   .pilule span { display: none; }
