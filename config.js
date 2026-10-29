@@ -43,6 +43,16 @@ export const SITES = {
     couleur: '#F0697C',
     pages: { discover: 'Découvrir', collection: 'Collection', succes: 'Succès', series: 'Fiche d’une série' },
   },
+  animezone: {
+    nom: 'AnimeZone',
+    base: 'https://animezone-8d2f5-default-rtdb.europe-west1.firebasedatabase.app',
+    adresse: 'https://kciol.github.io/AnimeZone/', // par exemple 'https://ton-pseudo.github.io/AnimeZone/'
+    couleur: '#9B7BEA',
+    pages: {
+      avenir: 'À venir', decouvrir: 'Découvrir', succes: 'Succès', profils: 'Profils', liste: 'Ma liste',
+      fiche: 'Fiche d’un anime', profil: 'Profil d’un membre',
+    },
+  },
   // Exemple pour un autre site qui a sa propre base :
   // portfolio: {
   //   nom: 'Portfolio',
