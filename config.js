@@ -5,7 +5,7 @@ export const ACTUALISATION = 60;
 
 // Image de fond : un fichier du dépôt (par exemple 'fond.jpg', à mettre à côté de index.html)
 // ou une adresse https://… Laisser vide pour le dégradé par défaut.
-export const FOND = '';
+export const FOND = 'fond.jpg';
 
 // Les sites affichés (la clé = le data-site mis dans la balise de suivi.js du site).
 // Le tableau va lire les chiffres de chaque site dans sa base, puis les additionne lui-même
