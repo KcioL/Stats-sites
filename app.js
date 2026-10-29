@@ -57,8 +57,9 @@ let mois = {};    // { 'AAAA-MM': { visiteurs } }
 let total = {};   // { visiteurs, vues }
 
 function preparerVue() {
-  if (selection !== 'tous' && donnees[selection]) {
-    ({ jours, mois, total } = donnees[selection]);
+  if (selection !== 'tous') {
+    // un site déclaré dans config.js mais sans chiffres pour l'instant : tout à zéro
+    ({ jours, mois, total } = donnees[selection] || { jours: {}, mois: {}, total: {} });
     return;
   }
   // Tous les sites : on additionne. Dans le classement, chaque « page » est un site.
@@ -102,7 +103,8 @@ function rendre() {
   const nbSites = Object.keys(donnees).length;
   $('sous-titre').textContent = !nbSites ? `Aucun site n'a encore envoyé de visites · ${date}`
     : tous ? `Voici ce qui se passe sur ${nbSites > 1 ? `tes ${nbSites} sites` : 'ton site'} · ${date}`
-      : `Voici ce qui se passe sur ${nomSite(selection)} · ${date}`;
+      : donnees[selection] ? `Voici ce qui se passe sur ${nomSite(selection)} · ${date}`
+        : `${nomSite(selection)} n'a pas encore envoyé de visites · ${date}`;
   const adresse = !tous && SITES[selection] && SITES[selection].adresse;
   $('ouvrir').hidden = !adresse;
   if (adresse) $('ouvrir').href = adresse;
@@ -244,20 +246,30 @@ function rendre() {
 // Barre des sites, à gauche
 const ICONE_TOUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>';
 const lettreSite = (id) => (SITES[id] && SITES[id].icone) || nomSite(id).charAt(0).toUpperCase();
+const logoSite = (id) => SITES[id] && SITES[id].logo;
+// Logo du site (ou sa lettre si pas de logo, ou si l'image ne se charge pas)
+const visuelSite = (id) => (logoSite(id)
+  ? `<img class="logo" src="${echapper(logoSite(id))}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'), { className: 'lettre', textContent: this.dataset.lettre }))" data-lettre="${echapper(lettreSite(id))}">`
+  : `<span class="lettre">${echapper(lettreSite(id))}</span>`);
+// Petite phrase sous le nom du site, dans l'étiquette de la barre de gauche
+function etatSite(id) {
+  if (problemes.some((p) => p.base === baseDuSite(id))) return 'base inaccessible';
+  if (!donnees[id]) return 'pas encore de visites';
+  return `${nf.format(((donnees[id].jours || {})[jourDe()] || {}).visiteurs || 0)} aujourd'hui`;
+}
 function rendreSites() {
   const nav = $('sites');
   const ids = ordreSites;
   nav.hidden = ids.length < 1;
-  const auj = jourDe();
-  const visiteursAuj = (id) => ((donnees[id].jours || {})[auj] || {}).visiteurs || 0;
-  const bouton = (id, contenu, nom, detail, couleur) => `<button type="button" data-site="${echapper(id)}" aria-pressed="${selection === id}" aria-label="${echapper(nom)}"${couleur ? ` style="--c:${couleur}"` : ''}>
+  const bouton = (id, contenu, nom, detail, couleur, classe = '') => `<button type="button" class="${classe}" data-site="${echapper(id)}" aria-pressed="${selection === id}" aria-label="${echapper(nom)}"${couleur ? ` style="--c:${couleur}"` : ''}>
       ${contenu}${couleur ? '<span class="point"></span>' : ''}<span class="info">${echapper(nom)}${detail ? `<small>${detail}</small>` : ''}</span></button>`;
   nav.innerHTML = (ids.length > 1 ? bouton('tous', ICONE_TOUS, 'Tous les sites', '', '') + '<span class="separateur"></span>' : '')
-    + ids.map((id) => bouton(id, `<span class="lettre">${echapper(lettreSite(id))}</span>`, nomSite(id), `${nf.format(visiteursAuj(id))} aujourd'hui`, couleurSite(id))).join('');
+    + ids.map((id) => bouton(id, visuelSite(id), nomSite(id), etatSite(id), couleurSite(id), `${logoSite(id) ? 'avec-logo' : ''}${donnees[id] ? '' : ' sans-chiffres'}`)).join('');
   // Pastille ronde en haut à droite : le site affiché
   const av = $('avatar');
+  av.classList.toggle('avec-logo', selection !== 'tous' && !!logoSite(selection));
   if (selection === 'tous') { av.textContent = '∑'; av.style.setProperty('--c', '#F2B632'); }
-  else { av.textContent = lettreSite(selection); av.style.setProperty('--c', couleurSite(selection)); }
+  else { av.innerHTML = visuelSite(selection); av.style.setProperty('--c', couleurSite(selection)); }
 }
 $('sites').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-site]');
@@ -611,10 +623,11 @@ async function charger() {
   donnees = nouvelles;
 }
 
+// Ordre de la barre de gauche : celui de config.js, puis les sites trouvés dans les bases sans y être déclarés.
+// Un site déclaré apparaît même s'il n'a encore envoyé aucune visite.
 function trierSites() {
-  const visiteurs = (id) => (donnees[id].total && donnees[id].total.visiteurs) || 0;
-  ordreSites = Object.keys(donnees).sort((a, b) => visiteurs(b) - visiteurs(a) || a.localeCompare(b));
-  if (selection !== 'tous' && !donnees[selection]) selection = 'tous';
+  ordreSites = [...new Set([...Object.keys(SITES), ...Object.keys(donnees)])];
+  if (selection !== 'tous' && !ordreSites.includes(selection)) selection = 'tous';
   if (ordreSites.length === 1) selection = ordreSites[0];
 }
 

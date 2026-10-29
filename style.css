@@ -121,6 +121,16 @@ svg { flex: none; }
 .dock button[aria-pressed="true"] { background: #fff; color: #1c1c1e; border-color: #fff; box-shadow: 0 6px 18px -6px rgba(255, 255, 255, .6); }
 .dock button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .dock .lettre { line-height: 1; }
+/* Logos des sites : l'image remplit le rond ; le site affiché a un anneau blanc */
+.dock button.avec-logo { padding: 0; overflow: visible; background: rgba(255, 255, 255, .06); }
+.dock .logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; opacity: .82; transition: opacity .25s, transform .25s; }
+.dock button.avec-logo:hover .logo { opacity: 1; transform: scale(1.04); }
+.dock button.avec-logo[aria-pressed="true"] { background: rgba(255, 255, 255, .06); border-color: transparent; box-shadow: 0 0 0 2px #fff, 0 6px 20px -4px rgba(255, 255, 255, .55); }
+.dock button.avec-logo[aria-pressed="true"] .logo { opacity: 1; }
+.dock button.sans-chiffres .logo, .dock button.sans-chiffres .lettre { filter: grayscale(.6); opacity: .55; }
+.avatar.avec-logo { background: none; padding: 0; overflow: visible; }
+.avatar .logo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.avatar .lettre { line-height: 1; }
 .dock .point { position: absolute; right: 2px; bottom: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--c); border: 2px solid rgba(30, 30, 34, .9); }
 .dock .separateur { width: 24px; height: 1px; margin: 0 auto; background: rgba(255, 255, 255, .14); }
 .dock .info { /* étiquette au survol */
