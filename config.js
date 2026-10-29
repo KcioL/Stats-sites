@@ -17,11 +17,13 @@ export const FOND = 'fond.jpg';
 //   couleur  : couleur du site (point dans la barre de gauche, vue « Tous les sites ») (facultatif)
 //   logo     : image ronde affichée dans la barre de gauche (fichier du dossier logos/, ou adresse https://)
 //   icone    : lettre ou emoji affiché à la place, s'il n'y a pas de logo (facultatif : 1re lettre du nom)
+//   parties  : true pour un site de jeux : le classement peut trier les jeux par parties jouées
 //   pages    : noms affichés des pages (clé = premier dossier de l'adresse, « accueil » pour la page d'accueil)
 export const SITES = {
   jeux: {
     logo: 'logos/jeux.png',
     nom: 'Jeux',
+    parties: true,
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
     adresse: 'https://kciol.github.io/Games/', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
     couleur: '#F2B632',
