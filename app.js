@@ -178,7 +178,14 @@ function rendre() {
     for (const c of cles) for (const parPage of Object.values((jours[c] && jours[c].actions) || {})) Object.keys(parPage || {}).forEach((pg) => toutes.add(pg));
     tri = [...toutes].filter((cle) => cle !== 'accueil').map((cle) => [cle, partiesDe(cle)]).sort((a, b) => b[1] - a[1] || (parCle[b[0]] || 0) - (parCle[a[0]] || 0));
   } else {
-    tri = Object.entries(parCle).sort((a, b) => b[1] - a[1]);
+    // les pages qui n'ont que des actions (un PDF téléchargé sans ouvrir la page…) apparaissent aussi
+    const avecActions = {};
+    if (!tous) for (const c of cles) for (const parPage of Object.values((jours[c] && jours[c].actions) || {})) {
+      for (const [pg, n] of Object.entries(parPage || {})) avecActions[pg] = (avecActions[pg] || 0) + n;
+    }
+    const toutes = new Set([...Object.keys(parCle), ...Object.keys(avecActions)]);
+    tri = [...toutes].map((cle) => [cle, parCle[cle] || 0])
+      .sort((a, b) => b[1] - a[1] || (avecActions[b[0]] || 0) - (avecActions[a[0]] || 0));
   }
   $('titre-classement').textContent = tous ? 'Sites les plus visités' : parParties ? 'Jeux les plus joués' : jeuxDuSite ? 'Jeux les plus ouverts' : 'Pages les plus vues';
   $('note-classement').textContent = tous ? `Visiteurs uniques par jour, cumulés sur ${libPeriode}`
