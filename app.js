@@ -158,9 +158,11 @@ function rendre() {
     const reste = tri.length - top.length;
     liste.innerHTML = top.map(([cle, nb], i) => {
       const c = tous ? ` style="--c:${couleurSite(cle)}"` : '';
-      return `<li${c}><span class="rang">${i + 1}</span>
-        <span class="nom">${tous ? '<span class="point"></span>' : ''}${echapper(nomPage(cle))}</span>
-        <span class="nombre">${nf.format(nb)}</span>
+      const nbParties = tous ? 0 : cles.reduce((t, j) => t + parties(j, cle), 0);
+      const titre = tous ? `Voir ${nomSite(cle)}` : `Détail : ${nomPage(cle)}`;
+      return `<li data-cle="${echapper(cle)}" tabindex="0" role="button" title="${echapper(titre)}"${c}><span class="rang">${i + 1}</span>
+        <span class="nom">${tous ? '<span class="point"></span>' : ''}${echapper(nomPage(cle))}${nbParties ? `<small class="parties">${nf.format(nbParties)} partie${nbParties > 1 ? 's' : ''}</small>` : ''}</span>
+        <span class="nombre">${nf.format(nb)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
         <span class="jauge"><i style="--l:${Math.max(2, (nb / max) * 100)}%; --retard:${i * 70}ms"></i></span></li>`;
     }).join('') + (reste ? `<li class="reste">et ${reste} autre${reste > 1 ? 's' : ''}</li>` : '');
   }
@@ -187,6 +189,10 @@ function rendre() {
   // Depuis le début
   $('t-visiteurs').textContent = nf.format(total.visiteurs || 0);
   $('t-vues').textContent = nf.format(total.vues || 0);
+  const nbTotalParties = tous ? 0 : totalParties();
+  $('t-parties-ligne').hidden = !nbTotalParties;
+  $('t-parties').textContent = nf.format(nbTotalParties);
+  rendreFiche();
   const meilleur = Object.keys(jours).reduce((m, c) => (v(c, 'visiteurs') > v(m, 'visiteurs') ? c : m), aujourdhui);
   $('t-record').innerHTML = v(meilleur, 'visiteurs')
     ? `${nf.format(v(meilleur, 'visiteurs'))}<small>${fmt(meilleur, { day: 'numeric', month: 'long', year: 'numeric' })}</small>` : '–';
@@ -275,18 +281,26 @@ function maxRond(max) {
   return [1, 2, 2.5, 5, 10].map((k) => k * p).find((s) => s >= brut) * 4;
 }
 
+// Graphique principal : visiteurs uniques par jour ou par mois
 function graphe(points, unite) {
-  const max = maxRond(Math.max(0, ...points.map((p) => p.valeur)));
-  const zoneHaut = $('graphe').clientHeight - 26;
   $('titre-graphe').textContent = unite === 'mois' ? 'Visiteurs uniques par mois' : 'Visiteurs uniques par jour';
   const totalVal = points.reduce((s, p) => s + p.valeur, 0);
   $('note-graphe').textContent = `Moyenne : ${nf.format(Math.round(totalVal / points.length))} par ${unite}`;
   const rec = points.reduce((m, p) => (p.valeur > m.valeur ? p : m), points[0]);
   $('record').textContent = rec.valeur ? `Record : ${nf.format(rec.valeur)} · ${unite === 'mois' ? fmt(rec.cle, { month: 'short', year: 'numeric' }) : fmt(rec.cle, { day: 'numeric', month: 'short' })}` : '';
+  dessinerBarres($('graphe'), points);
+  $('tableau-corps').innerHTML = points.slice().reverse().map((p) => `<tr><td>${p.titre}</td><td>${nf.format(p.valeur)}</td></tr>`).join('');
+}
 
-  $('axe').innerHTML = [0, 1, 2, 3, 4].map((k) => `<div class="graduation${k ? '' : ' zero'}" style="top:${zoneHaut * (1 - k / 4)}px"><span>${nf.format((max / 4) * k)}</span></div>`).join('');
-
-  const barres = $('barres');
+// Barres dans un bloc .graphe (qui contient .axe, .barres et .bulle).
+// Chaque point : { cle, valeur, actuelle, etiquette, titre, unite: ['visiteur', 'visiteurs'], detail }
+function dessinerBarres(zone, points) {
+  zone._derniers = points;
+  zone._hauteur = zone.clientHeight;
+  const max = maxRond(Math.max(0, ...points.map((p) => p.valeur)));
+  const zoneHaut = zone.clientHeight - 26;
+  zone.querySelector('.axe').innerHTML = [0, 1, 2, 3, 4].map((k) => `<div class="graduation${k ? '' : ' zero'}" style="top:${zoneHaut * (1 - k / 4)}px"><span>${nf.format((max / 4) * k)}</span></div>`).join('');
+  const barres = zone.querySelector('.barres');
   const serre = points.length > 14;
   barres.classList.toggle('fin', serre);
   barres.style.setProperty('--ecart-barres', serre ? (innerWidth < 640 ? '2px' : '5px') : (innerWidth < 640 ? '8px' : '14px'));
@@ -296,19 +310,26 @@ function graphe(points, unite) {
       <span class="etiquette">${p.etiquette}</span>
     </div>`).join('');
   barres._points = points;
-
-  $('tableau-corps').innerHTML = points.slice().reverse().map((p) => `<tr><td>${p.titre}</td><td>${nf.format(p.valeur)}</td></tr>`).join('');
+  zone.querySelector('.bulle').hidden = true;
 }
 
-// Bulle au survol (ou au toucher) des barres
-function brancherBulle() {
-  const zone = $('graphe');
-  const bulle = $('bulle');
+// Si le bloc change de hauteur après coup (la carte voisine s'allonge…), on redessine les barres
+const surveillance = typeof ResizeObserver === 'function' ? new ResizeObserver((entrees) => {
+  for (const { target: zone } of entrees) {
+    if (zone._derniers && zone.clientHeight && zone.clientHeight !== zone._hauteur) dessinerBarres(zone, zone._derniers);
+  }
+}) : null;
+
+// Bulle au survol (ou au toucher) des barres d'un bloc .graphe
+function brancherBulle(zone) {
+  if (surveillance) surveillance.observe(zone);
+  const bulle = zone.querySelector('.bulle');
   const montrer = (col) => {
-    const p = $('barres')._points[Number(col.dataset.i)];
+    const p = zone.querySelector('.barres')._points[Number(col.dataset.i)];
+    const [un, plusieurs] = p.unite || ['visiteur', 'visiteurs'];
     zone.querySelectorAll('.colonne.active').forEach((c) => c.classList.remove('active'));
     col.classList.add('active');
-    bulle.innerHTML = `<span>${p.titre}</span><strong>${nf.format(p.valeur)} visiteur${p.valeur > 1 ? 's' : ''}</strong><span>${p.detail}</span>`;
+    bulle.innerHTML = `<span>${p.titre}</span><strong>${nf.format(p.valeur)} ${p.valeur > 1 ? plusieurs : un}</strong>${p.detail ? `<span>${p.detail}</span>` : ''}`;
     bulle.hidden = false;
     const rz = zone.getBoundingClientRect();
     const rb = col.querySelector('.barre-v').getBoundingClientRect();
@@ -321,6 +342,146 @@ function brancherBulle() {
   zone.addEventListener('pointerdown', (e) => { const col = e.target.closest('.colonne'); if (col) montrer(col); });
   zone.addEventListener('pointerleave', cacher);
 }
+
+// ---------- Actions (parties jouées) ----------
+// Les actions dont le nom commence par « parties » sont des parties : « parties-en-ligne », « parties-telephone »…
+const MODES = { 'parties-en-ligne': 'En ligne', 'parties-telephone': 'Sur un seul téléphone' };
+const nomMode = (a) => MODES[a] || joli(a.replace(/^parties-?/, '') || 'autres');
+const estPartie = (a) => a.startsWith('parties');
+// Parties d'une page un jour donné, en tout ou pour un mode
+function parties(cle, page, mode = null) {
+  const actions = (jours[cle] && jours[cle].actions) || {};
+  let n = 0;
+  for (const [a, parPage] of Object.entries(actions)) if (estPartie(a) && (!mode || a === mode)) n += (parPage && parPage[page]) || 0;
+  return n;
+}
+const partiesMois = (m, page) => Object.keys(jours).filter((c) => c.startsWith(m)).reduce((s, c) => s + parties(c, page), 0);
+const visiteursPage = (cle, page) => (jours[cle] && jours[cle].pages && jours[cle].pages[page]) || 0;
+const visiteursPageMois = (m, page) => Object.keys(jours).filter((c) => c.startsWith(m)).reduce((s, c) => s + visiteursPage(c, page), 0);
+function totalParties() {
+  let n = 0;
+  for (const [a, parPage] of Object.entries((total && total.actions) || {})) if (estPartie(a)) for (const nb of Object.values(parPage || {})) n += nb;
+  return n;
+}
+
+// ---------- Fiche d'une page (clic dans le classement) ----------
+let pageOuverte = null;
+let serieFiche = 'parties';
+
+function ouvrirFiche(page) {
+  pageOuverte = page;
+  const fiche = $('fiche');
+  serieFiche = null;
+  rendreFiche(true);
+  if (!fiche.open) fiche.showModal();
+}
+
+function rendreFiche(animerFiche = false) {
+  const fiche = $('fiche');
+  if (!pageOuverte || (!fiche.open && !animerFiche)) return;
+  const page = pageOuverte;
+  const aujourdhui = jourDe();
+  const n = periode === '12m' ? 365 : Number(periode);
+  const cles = derniersJours(n);
+  const moisCles = derniersMois(12);
+  const libPeriode = periode === '12m' ? '12 mois' : `${periode} jours`;
+
+  const nbParties = cles.reduce((s, c) => s + parties(c, page), 0);
+  const aDesParties = nbParties > 0 || Object.keys(jours).some((c) => parties(c, page) > 0);
+  if (!serieFiche) serieFiche = aDesParties ? 'parties' : 'visiteurs';
+
+  $('fiche-site').textContent = nomSite(selection);
+  $('fiche-titre').textContent = nomPage(page);
+  $('fiche-periode').textContent = `Sur ${libPeriode}`;
+
+  const visiteurs = cles.reduce((s, c) => s + visiteursPage(c, page), 0);
+  const stats = [
+    ['Visiteurs', visiteurs, 'cumulés par jour'],
+    ...(aDesParties ? [
+      ['Parties jouées', nbParties, ''],
+      ["Parties aujourd'hui", parties(aujourdhui, page), `hier : ${nf.format(parties(decaler(aujourdhui, -1), page))}`],
+    ] : []),
+  ];
+  $('fiche-chiffres').innerHTML = stats.map(([lib, val, note]) => `<div class="mini"><span>${lib}</span><strong>${nf.format(val)}</strong>${note ? `<small>${note}</small>` : ''}</div>`).join('');
+
+  // Répartition par mode (en ligne / sur un seul téléphone)
+  const parMode = {};
+  for (const c of cles) for (const [a, parPage] of Object.entries((jours[c] && jours[c].actions) || {})) {
+    if (estPartie(a) && parPage && parPage[page]) parMode[a] = (parMode[a] || 0) + parPage[page];
+  }
+  const modes = Object.entries(parMode).sort((x, y) => y[1] - x[1]);
+  const couleurs = { 'parties-en-ligne': 'var(--or)', 'parties-telephone': 'var(--bleu)' };
+  const totModes = modes.reduce((s, [, nb]) => s + nb, 0);
+  $('fiche-modes').hidden = !totModes;
+  if (totModes) {
+    $('fiche-modes').innerHTML = `<div class="repartition">${modes.map(([a, nb]) => `<i style="width:${(nb / totModes) * 100}%;background:${couleurs[a] || 'var(--violet)'}"></i>`).join('')}</div>
+      <ul class="legende">${modes.map(([a, nb]) => `<li><span class="puce" style="background:${couleurs[a] || 'var(--violet)'}"></span><span class="lib">${echapper(nomMode(a))}</span><span class="pct">${Math.round((nb / totModes) * 100)} %</span><span class="nb">${nf.format(nb)}</span></li>`).join('')}</ul>`;
+  }
+
+  // Choix de la courbe
+  $('fiche-choix').hidden = !aDesParties;
+  $('fiche-choix').querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.serie === serieFiche)));
+  const enParties = serieFiche === 'parties';
+  const unite = enParties ? ['partie', 'parties'] : ['visiteur', 'visiteurs'];
+  $('fiche-titre-graphe').textContent = `${enParties ? 'Parties jouées' : 'Visiteurs'} par ${periode === '12m' ? 'mois' : 'jour'}`;
+
+  let points;
+  if (periode === '12m') {
+    points = moisCles.map((m, i) => ({
+      cle: m, actuelle: i === 11, unite,
+      valeur: enParties ? partiesMois(m, page) : visiteursPageMois(m, page),
+      etiquette: fmt(m, { month: 'short' }).replace('.', ''),
+      titre: fmt(m, { month: 'long', year: 'numeric' }),
+    }));
+  } else {
+    points = cles.map((c, i) => {
+      const detail = enParties
+        ? Object.keys(MODES).map((a) => [a, parties(c, page, a)]).filter(([, nb]) => nb).map(([a, nb]) => `${nomMode(a)} : ${nf.format(nb)}`).join(' · ')
+        : '';
+      return {
+        cle: c, actuelle: c === aujourdhui, unite, detail,
+        valeur: enParties ? parties(c, page) : visiteursPage(c, page),
+        etiquette: c === aujourdhui ? 'Auj.' : periode === '7' ? fmt(c, { weekday: 'short' }).replace('.', '')
+          : ((n - 1 - i) % 5 === 0 ? fmt(c, { day: 'numeric' }) : ''),
+        titre: c === aujourdhui ? "Aujourd'hui" : fmt(c, { weekday: 'long', day: 'numeric', month: 'long' }),
+      };
+    });
+  }
+  // Le graphique se dessine une fois la fenêtre affichée (il a besoin de sa hauteur)
+  requestAnimationFrame(() => {
+    if (animerFiche) { fiche.classList.add('anime'); setTimeout(() => fiche.classList.remove('anime'), 1400); }
+    dessinerBarres($('fiche-graphe'), points);
+  });
+}
+
+$('fiche-fermer').addEventListener('click', () => $('fiche').close());
+$('fiche').addEventListener('click', (e) => { if (e.target === $('fiche')) $('fiche').close(); }); // clic à côté
+$('fiche').addEventListener('close', () => { pageOuverte = null; });
+$('fiche-choix').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-serie]');
+  if (!b) return;
+  serieFiche = b.dataset.serie;
+  rendreFiche(true);
+});
+
+$('classement').addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('li[data-cle]')) { e.preventDefault(); e.target.click(); }
+});
+
+// Clic dans le classement : fiche de la page, ou (vue « Tous les sites ») passage sur le site
+$('classement').addEventListener('click', (e) => {
+  const li = e.target.closest('li[data-cle]');
+  if (!li) return;
+  if (selection === 'tous') {
+    selection = li.dataset.cle;
+    try { localStorage.setItem('tdb:site', selection); } catch (err) { /* stockage bloqué */ }
+    animer = true;
+    rendre();
+    scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    ouvrirFiche(li.dataset.cle);
+  }
+});
 
 // ---------- Période ----------
 document.querySelectorAll('.periodes button').forEach((b) => b.addEventListener('click', () => {
@@ -406,7 +567,8 @@ async function actualiser() {
   }
 }
 
-brancherBulle();
+brancherBulle($('graphe'));
+brancherBulle($('fiche-graphe'));
 
 if (DEMO) {
   remplirDemo();
@@ -427,7 +589,7 @@ function remplirDemo() {
   let graine = 7;
   const alea = () => ((graine = (graine * 16807) % 2147483647) / 2147483647);
   const modeles = {
-    jeux: { base: 8, pente: 0.09, weekend: 1.6, appli: 0.22, mobile: 0.72,
+    jeux: { base: 8, pente: 0.09, weekend: 1.6, appli: 0.22, mobile: 0.72, parties: true,
       pages: { accueil: 12, uno: 9, skyjo: 7, loupgarou: 6, undercover: 5, president: 5, petitbac: 4, poker: 4, cranes: 3, bataille: 3, puissance4: 3, tokyo: 2, kassen: 2, cluedo: 2, chevaux: 2, blackjack: 2, demineur: 1.5, mastermind: 1 } },
     pyrolos: { base: 6, pente: 0.03, weekend: 1.8, appli: 0.05, mobile: 0.6,
       pages: { carte: 10, itineraires: 6, meteo: 5, classement: 3, riders: 2, messages: 2, succes: 1.5 } },
@@ -446,11 +608,27 @@ function remplirDemo() {
       const mobile = Math.round(visiteurs * (mod.mobile + (alea() - 0.5) * 0.14));
       const pages = {};
       for (const [p, w] of listePages) { const nb = Math.round(visiteurs * 1.4 * (w / somPoids) * (0.6 + alea() * 0.8)); if (nb) pages[p] = nb; }
+      // Parties jouées (site de jeux) : environ 1,5 partie par visiteur d'un jeu, plutôt en ligne le week-end
+      let actions;
+      if (mod.parties) {
+        actions = { 'parties-en-ligne': {}, 'parties-telephone': {} };
+        for (const [p, nb] of Object.entries(pages)) {
+          if (p === 'accueil') continue;
+          const tot = Math.round(nb * (1 + alea()));
+          const enLigne = Math.round(tot * (facteur > 1 ? 0.6 : 0.4) * (0.8 + alea() * 0.4));
+          if (enLigne) actions['parties-en-ligne'][p] = enLigne;
+          if (tot - enLigne > 0) actions['parties-telephone'][p] = tot - enLigne;
+        }
+      }
       j[c] = { visiteurs, vues: Math.round(visiteurs * (2.6 + alea() * 1.4)), nouveaux: Math.round(visiteurs * (0.3 + alea() * 0.2)),
-        appli: Math.round(visiteurs * mod.appli * (0.8 + alea() * 0.4)), appareils: { mobile, ordi: visiteurs - mobile }, pages };
+        appli: Math.round(visiteurs * mod.appli * (0.8 + alea() * 0.4)), appareils: { mobile, ordi: visiteurs - mobile }, pages, actions };
     });
     const m = {};
     for (const mm of derniersMois(14)) m[mm] = { visiteurs: Math.round(Object.keys(j).filter((c) => c.startsWith(mm)).reduce((s, c) => s + j[c].visiteurs, 0) * 0.55) };
-    donnees[id] = { jours: j, mois: m, total: { visiteurs: tous.reduce((s, c) => s + j[c].nouveaux, 0), vues: tous.reduce((s, c) => s + j[c].vues, 0) } };
+    const totActions = {};
+    for (const c of tous) for (const [a, parPage] of Object.entries(j[c].actions || {})) for (const [p, nb] of Object.entries(parPage)) {
+      ((totActions[a] = totActions[a] || {})[p] = (totActions[a][p] || 0) + nb);
+    }
+    donnees[id] = { jours: j, mois: m, total: { visiteurs: tous.reduce((s, c) => s + j[c].nouveaux, 0), vues: tous.reduce((s, c) => s + j[c].vues, 0), actions: totActions } };
   }
 }

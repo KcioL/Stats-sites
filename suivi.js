@@ -21,6 +21,11 @@
  *   - window.suivi.page('itineraires') compte le passage sur un autre onglet (une page vue de plus,
  *     et un visiteur de plus pour cet onglet s'il ne l'avait pas encore ouvert ce jour-là).
  *
+ * Actions : window.suivi.action('parties-en-ligne', 'uno') ajoute 1 à
+ *   stats/<site>/jours/AAAA-MM-JJ/actions/<action>/<page>   et   stats/<site>/total/actions/<action>/<page>
+ * (une partie lancée, un formulaire envoyé…). Sans <page> : la page actuelle. Le tableau de bord affiche
+ * les actions dont le nom commence par « parties » comme des parties jouées, avec le détail par mode.
+ *
  * Pas compté : localhost, hors connexion, et un appareil où l'on a ouvert le site avec ?suivi=off
  * (?suivi=on pour annuler).
  */
@@ -69,9 +74,14 @@
     return nettoyer(premier) || 'accueil';
   }
 
+  const horsJeu = () => location.protocol === 'file:' || ['localhost', '127.0.0.1', ''].includes(location.hostname) || !navigator.onLine;
+  const envoyer = (maj) => fetch(`${BASE}/.json`, { method: 'PATCH', body: JSON.stringify(maj), keepalive: true }).catch(() => {});
+  const UN = { '.sv': { increment: 1 } };
+  let pageCourante = pageActuelle();
+
   function compter(page) {
-    if (location.protocol === 'file:' || ['localhost', '127.0.0.1', ''].includes(location.hostname)) return;
-    if (!navigator.onLine) return;
+    pageCourante = page;
+    if (horsJeu()) return;
     const memoire = stockage();
     if (!memoire) return;
 
@@ -79,7 +89,7 @@
     const mois = jour.slice(0, 7);
     const s = `stats/${site}`;
     const d = `${s}/jours/${jour}`;
-    const un = { '.sv': { increment: 1 } };
+    const un = UN;
     const maj = { [`${d}/vues`]: un, [`${s}/total/vues`]: un };
 
     if (!memoire.vu) {
@@ -106,11 +116,19 @@
       localStorage.setItem(CLE, JSON.stringify({ vu: true, jour, mois, pages }));
     } catch (e) { return; }
 
-    fetch(`${BASE}/.json`, { method: 'PATCH', body: JSON.stringify(maj), keepalive: true }).catch(() => {});
+    envoyer(maj);
+  }
+
+  function action(nom, page) {
+    const a = nettoyer(nom);
+    const p = nettoyer(page) || pageCourante;
+    if (!a || horsJeu() || !stockage()) return;
+    const s = `stats/${site}`;
+    envoyer({ [`${s}/jours/${jourDe(new Date())}/actions/${a}/${p}`]: UN, [`${s}/total/actions/${a}/${p}`]: UN });
   }
 
   // Première page : comptée un peu après l'ouverture, pour ne pas ralentir le site
-  let pageInitiale = pageActuelle();
+  let pageInitiale = pageCourante;
   let lance = false;
   const lancer = () => setTimeout(() => { lance = true; compter(pageInitiale); }, 1500);
   if (document.readyState === 'complete') lancer();
@@ -121,8 +139,9 @@
     page(nom) {
       const page = nettoyer(nom);
       if (!page) return;
-      if (!lance) { pageInitiale = page; return; } // pas encore compté : c'est cette page qui le sera
+      if (!lance) { pageInitiale = page; pageCourante = page; return; } // pas encore compté : c'est cette page qui le sera
       compter(page);
     },
+    action,
   };
 })();

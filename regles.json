@@ -34,6 +34,14 @@
                 ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/) && $page.matches(/^[a-z0-9-]{2,40}$/)",
                 ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
               }
+            },
+            "actions": {
+              "$action": {
+                "$page": {
+                  ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/) && $action.matches(/^[a-z0-9-]{2,40}$/) && $page.matches(/^[a-z0-9-]{2,40}$/)",
+                  ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+                }
+              }
             }
           }
         },
@@ -53,6 +61,14 @@
           "visiteurs": {
             ".write": "$site.matches(/^[a-z0-9-]{2,30}$/)",
             ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+          },
+          "actions": {
+            "$action": {
+              "$page": {
+                ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $action.matches(/^[a-z0-9-]{2,40}$/) && $page.matches(/^[a-z0-9-]{2,40}$/)",
+                ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+              }
+            }
           }
         }
       }

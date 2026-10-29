@@ -184,6 +184,15 @@ h1, h2 { font-weight: 600; }
 .classement li.reste { display: block; background: none; border: 0; padding: 2px 12px; color: var(--texte-3); font-size: .85rem; }
 .vide { color: var(--texte-3); font-size: .9rem; padding: 18px 0; text-align: center; }
 
+/* lignes cliquables du classement */
+.classement li[data-cle] { cursor: pointer; transition: background .2s, border-color .2s, transform .2s; }
+.classement li[data-cle]:hover, .classement li[data-cle]:focus-visible { background: rgba(255, 255, 255, .09); border-color: rgba(255, 255, 255, .16); }
+.classement li[data-cle]:active { transform: scale(.99); }
+.classement .nombre { display: inline-flex; align-items: center; gap: 4px; }
+.classement .chevron { width: 16px; height: 16px; fill: none; stroke: var(--texte-3); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s, stroke .2s; }
+.classement li[data-cle]:hover .chevron { transform: translateX(2px); stroke: var(--texte); }
+.classement .parties { margin-left: 8px; font-size: .78rem; font-weight: 500; color: var(--or-clair); white-space: nowrap; }
+
 /* ---------- Appareils ---------- */
 .repartition { display: flex; gap: 3px; height: 16px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, .07); margin: 10px 0 16px; }
 .repartition i { display: block; height: 100%; }
@@ -214,6 +223,34 @@ h1, h2 { font-weight: 600; }
 .totaux dd { font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .totaux dd small { display: block; font-size: .75rem; font-weight: 400; color: var(--texte-3); }
 
+/* ---------- Fiche d'une page ---------- */
+.fiche {
+  margin: auto; width: min(760px, calc(100% - 32px)); max-height: calc(100% - 48px); overflow: auto;
+  padding: 22px 24px 24px; border-radius: 26px; color: var(--texte);
+  background: linear-gradient(155deg, rgba(40, 52, 110, .78), rgba(16, 22, 56, .86));
+}
+.fiche::backdrop { background: rgba(5, 8, 24, .55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.fiche[open] { animation: apparait .35s cubic-bezier(.2, .8, .2, 1); }
+@keyframes apparait { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+.fiche-entete { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+.fiche-entete h2 { font-size: 1.6rem; }
+.fermer { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .08); border: 1px solid var(--bord); flex: none; }
+.fermer:hover { background: rgba(255, 255, 255, .16); }
+.fermer svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; fill: none; }
+.fiche-chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.mini { padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .08); display: flex; flex-direction: column; gap: 2px; }
+.mini span { color: var(--texte-2); font-size: .85rem; }
+.mini strong { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mini small { color: var(--texte-3); font-size: .78rem; }
+.fiche-modes { margin-top: 14px; }
+.fiche-modes .repartition { margin: 0 0 12px; height: 12px; }
+.fiche-graphe-entete { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 22px 0 8px; flex-wrap: wrap; }
+.fiche-graphe-entete h3 { font-size: 1rem; font-weight: 600; }
+.periodes.petit { margin: 0; }
+.periodes.petit button { padding: 5px 12px; font-size: .85rem; }
+.graphe.petit-graphe { height: 240px; min-height: 240px; flex: none; }
+.fiche.anime .barre-v { animation: pousse .8s cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--retard); }
+
 /* ---------- Pied ---------- */
 .pied { max-width: 1240px; margin: 0 auto; padding: 4px 20px 40px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; justify-content: space-between; }
 .moi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; color: var(--texte-3); font-size: .85rem; }
@@ -243,6 +280,13 @@ h1, h2 { font-weight: 600; }
   .periodes button { padding: 7px 11px; font-size: .85rem; }
   .graphe { height: 240px; min-height: 240px; padding-left: 28px; }
   .ecart .suffixe { display: none; }
+  .fiche { padding: 18px 16px 20px; border-radius: 22px; width: calc(100% - 20px); }
+  .fiche-entete h2 { font-size: 1.35rem; }
+  .graphe.petit-graphe { height: 200px; min-height: 200px; }
+  .fiche-chiffres { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+  .mini { padding: 10px; border-radius: 14px; }
+  .mini span, .mini small { font-size: .72rem; }
+  .mini strong { font-size: 1.3rem; }
   .barres { left: 28px; }
   .axe .graduation { left: 28px; }
   .axe .graduation span { left: -30px; width: 24px; }

@@ -124,10 +124,38 @@
       <dl class="totaux">
         <div><dt>Visiteurs</dt><dd id="t-visiteurs">–</dd></div>
         <div><dt>Pages vues</dt><dd id="t-vues">–</dd></div>
+        <div id="t-parties-ligne" hidden><dt>Parties jouées</dt><dd id="t-parties">–</dd></div>
         <div><dt>Meilleur jour</dt><dd id="t-record">–</dd></div>
       </dl>
     </section>
   </main>
+
+  <!-- Fiche d'une page (ou d'un jeu) : s'ouvre en cliquant dans le classement -->
+  <dialog class="fiche verre" id="fiche" aria-labelledby="fiche-titre">
+    <header class="fiche-entete">
+      <div>
+        <p class="note"><span id="fiche-site"></span> · <span id="fiche-periode"></span></p>
+        <h2 id="fiche-titre">Page</h2>
+      </div>
+      <button type="button" class="fermer" id="fiche-fermer" aria-label="Fermer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="fiche-chiffres" id="fiche-chiffres"></div>
+    <div class="fiche-modes" id="fiche-modes" hidden></div>
+    <div class="fiche-graphe-entete">
+      <h3 id="fiche-titre-graphe">Parties jouées par jour</h3>
+      <div class="periodes petit" id="fiche-choix" role="tablist" aria-label="Courbe affichée">
+        <button role="tab" data-serie="parties" aria-selected="true">Parties</button>
+        <button role="tab" data-serie="visiteurs" aria-selected="false">Visiteurs</button>
+      </div>
+    </div>
+    <div class="graphe petit-graphe" id="fiche-graphe">
+      <div class="axe" aria-hidden="true"></div>
+      <div class="barres"></div>
+      <div class="bulle" role="status" hidden></div>
+    </div>
+  </dialog>
 
   <footer class="pied">
     <div class="moi" id="moi"></div>
