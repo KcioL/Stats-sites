@@ -3,9 +3,12 @@
 // Toutes les combien de secondes le tableau va chercher les nouveaux chiffres
 export const ACTUALISATION = 60;
 
-// Image de fond : un fichier du dépôt (par exemple 'fond.jpg', à mettre à côté de index.html)
-// ou une adresse https://… Laisser vide pour le dégradé par défaut.
-export const FOND = 'fond.jpg';
+// Images de fond : un fichier du dépôt (à mettre à côté de index.html) ou une adresse https://…
+//   FOND_PC         : écran en largeur (ordinateur, tablette couchée)
+//   FOND_TELEPHONE  : écran en hauteur (téléphone, tablette debout) ; vide = la même que FOND_PC
+// Laisser les deux vides pour le dégradé par défaut.
+export const FOND_PC = 'fond-pc.jpg';
+export const FOND_TELEPHONE = 'fond-telephone.jpg';
 
 // Les sites affichés (la clé = le data-site mis dans la balise de suivi.js du site).
 // Le tableau va lire les chiffres de chaque site dans sa base, puis les additionne lui-même

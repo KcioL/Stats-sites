@@ -8,7 +8,12 @@ import * as CONFIG from './config.js';
 // Lecture tolérante de config.js : un réglage absent prend sa valeur par défaut
 const SITES = CONFIG.SITES || {};
 const ACTUALISATION = Number(CONFIG.ACTUALISATION) || 60;
-if (CONFIG.FOND) document.documentElement.style.setProperty('--image-fond', `url("${String(CONFIG.FOND).replace(/"/g, '%22')}")`);
+// Images de fond : une pour les écrans en largeur, une pour les écrans en hauteur (style.css choisit)
+const urlFond = (f) => `url("${String(f).replace(/"/g, '%22')}")`;
+const fondPc = CONFIG.FOND_PC || CONFIG.FOND; // FOND : ancien réglage, une seule image pour tout
+const fondTel = CONFIG.FOND_TELEPHONE || fondPc;
+if (fondPc) document.documentElement.style.setProperty('--image-fond', urlFond(fondPc));
+if (fondTel) document.documentElement.style.setProperty('--image-fond-tel', urlFond(fondTel));
 
 const sansSlash = (u) => String(u || '').trim().replace(/\/+$/, '');
 
