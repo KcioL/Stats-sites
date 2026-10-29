@@ -3,7 +3,12 @@
 // par l'API REST de Firebase, sans bibliothèque,
 // et va chercher les nouveaux chiffres toutes les ACTUALISATION secondes.
 // Ajoute ?demo à l'adresse pour voir le tableau rempli de chiffres inventés.
-import { ACTUALISATION, SITES } from './config.js';
+import * as CONFIG from './config.js';
+
+// Lecture tolérante de config.js : un réglage absent prend sa valeur par défaut
+const SITES = CONFIG.SITES || {};
+const ACTUALISATION = Number(CONFIG.ACTUALISATION) || 60;
+if (CONFIG.FOND) document.documentElement.style.setProperty('--image-fond', `url("${String(CONFIG.FOND).replace(/"/g, '%22')}")`);
 
 const sansSlash = (u) => String(u || '').trim().replace(/\/+$/, '');
 
@@ -143,6 +148,19 @@ function rendre() {
     })), 'jour');
   }
 
+  // Badge du graphique : visiteurs de la période comparés à la période d'avant
+  const badge = $('badge-graphe');
+  const visPeriode = somme(cles, 'visiteurs');
+  const visAvant = somme(avant, 'visiteurs');
+  if (comparable && visAvant) {
+    const p = Math.round(((visPeriode - visAvant) / visAvant) * 100);
+    badge.hidden = false;
+    badge.className = `badge${p < 0 ? ' baisse' : ''}`;
+    badge.textContent = `${p >= 0 ? '↗ +' : '↘ '}${p} % vs période d'avant`;
+  } else {
+    badge.hidden = true;
+  }
+
   // Classement : pages du site, ou sites entre eux
   const parCle = {};
   for (const c of cles) for (const [cle, nb] of Object.entries((jours[c] && jours[c].pages) || {})) parCle[cle] = (parCle[cle] || 0) + nb;
@@ -156,14 +174,20 @@ function rendre() {
     const max = tri[0][1];
     const top = tri.slice(0, 7);
     const reste = tri.length - top.length;
+    const ACCENTS = ['#4F8DFF', '#F2B632', '#F0697C', '#9B7BEA', '#3FBF7F', '#2EC4C4', '#E58A3A'];
     liste.innerHTML = top.map(([cle, nb], i) => {
-      const c = tous ? ` style="--c:${couleurSite(cle)}"` : '';
+      const accent = tous ? couleurSite(cle) : ACCENTS[i % ACCENTS.length];
       const nbParties = tous ? 0 : cles.reduce((t, j) => t + parties(j, cle), 0);
       const titre = tous ? `Voir ${nomSite(cle)}` : `Détail : ${nomPage(cle)}`;
-      return `<li data-cle="${echapper(cle)}" tabindex="0" role="button" title="${echapper(titre)}"${c}><span class="rang">${i + 1}</span>
-        <span class="nom">${tous ? '<span class="point"></span>' : ''}${echapper(nomPage(cle))}${nbParties ? `<small class="parties">${nf.format(nbParties)} partie${nbParties > 1 ? 's' : ''}</small>` : ''}</span>
-        <span class="nombre">${nf.format(nb)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
-        <span class="jauge"><i style="--l:${Math.max(2, (nb / max) * 100)}%; --retard:${i * 70}ms"></i></span></li>`;
+      const sous = `${nf.format(nb)} visiteur${nb > 1 ? 's' : ''}${nbParties ? ` · <span class="parties">${nf.format(nbParties)} partie${nbParties > 1 ? 's' : ''}</span>` : ''}`;
+      return `<li data-cle="${echapper(cle)}" tabindex="0" role="button" title="${echapper(titre)}" style="--accent:${accent}">
+        <span class="rang">${String(i + 1).padStart(2, '0')}</span>
+        <span class="element">
+          <span class="nom">${echapper(nomPage(cle))}</span>
+          <span class="nombre">${nf.format(nb)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+          <span class="sous">${sous}</span>
+          <span class="jauge"><i style="--l:${Math.max(2, (nb / max) * 100)}%; --retard:${i * 70}ms"></i></span>
+        </span></li>`;
     }).join('') + (reste ? `<li class="reste">et ${reste} autre${reste > 1 ? 's' : ''}</li>` : '');
   }
 
@@ -208,20 +232,32 @@ function rendre() {
     animer = false;
     document.body.classList.add('anime');
     setTimeout(() => document.body.classList.remove('anime'), 1600);
+    const grille = document.querySelector('.grille');
+    grille.classList.remove('apparait');
+    void grille.offsetWidth; // relance l'animation
+    grille.classList.add('apparait');
+    clearTimeout(grille._fin);
+    grille._fin = setTimeout(() => grille.classList.remove('apparait'), 1200);
   }
 }
 
-// Pastilles de choix du site
+// Barre des sites, à gauche
+const ICONE_TOUS = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>';
+const lettreSite = (id) => (SITES[id] && SITES[id].icone) || nomSite(id).charAt(0).toUpperCase();
 function rendreSites() {
   const nav = $('sites');
   const ids = ordreSites;
-  if (ids.length < 1) { nav.innerHTML = ''; return; }
-  const bouton = (id, nom, nb, couleur) => `<button type="button" data-site="${id}" aria-pressed="${selection === id}"${couleur ? ` style="--c:${couleur}"` : ''}>
-      <span class="point"></span>${echapper(nom)}${nb !== null ? `<span class="nb" title="visiteurs aujourd'hui">${nf.format(nb)}</span>` : ''}</button>`;
+  nav.hidden = ids.length < 1;
   const auj = jourDe();
   const visiteursAuj = (id) => ((donnees[id].jours || {})[auj] || {}).visiteurs || 0;
-  nav.innerHTML = (ids.length > 1 ? bouton('tous', 'Tous les sites', null, 'var(--texte)') : '')
-    + ids.map((id) => bouton(id, nomSite(id), visiteursAuj(id), couleurSite(id))).join('');
+  const bouton = (id, contenu, nom, detail, couleur) => `<button type="button" data-site="${echapper(id)}" aria-pressed="${selection === id}" aria-label="${echapper(nom)}"${couleur ? ` style="--c:${couleur}"` : ''}>
+      ${contenu}${couleur ? '<span class="point"></span>' : ''}<span class="info">${echapper(nom)}${detail ? `<small>${detail}</small>` : ''}</span></button>`;
+  nav.innerHTML = (ids.length > 1 ? bouton('tous', ICONE_TOUS, 'Tous les sites', '', '') + '<span class="separateur"></span>' : '')
+    + ids.map((id) => bouton(id, `<span class="lettre">${echapper(lettreSite(id))}</span>`, nomSite(id), `${nf.format(visiteursAuj(id))} aujourd'hui`, couleurSite(id))).join('');
+  // Pastille ronde en haut à droite : le site affiché
+  const av = $('avatar');
+  if (selection === 'tous') { av.textContent = '∑'; av.style.setProperty('--c', '#F2B632'); }
+  else { av.textContent = lettreSite(selection); av.style.setProperty('--c', couleurSite(selection)); }
 }
 $('sites').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-site]');
@@ -484,17 +520,57 @@ $('classement').addEventListener('click', (e) => {
 });
 
 // ---------- Période ----------
-document.querySelectorAll('.periodes button').forEach((b) => b.addEventListener('click', () => {
+document.querySelectorAll('[data-periode]').forEach((b) => b.addEventListener('click', () => {
   periode = b.dataset.periode;
-  document.querySelectorAll('.periodes button').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+  document.querySelectorAll('[data-periode]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
   animer = true;
   rendre();
 }));
 let attente;
 addEventListener('resize', () => { clearTimeout(attente); attente = setTimeout(rendre, 150); });
 
+// ---------- Boutons du haut ----------
+$('actualiser').addEventListener('click', async () => {
+  if (DEMO) { animer = true; rendre(); return; }
+  const b = $('actualiser');
+  b.classList.add('tourne');
+  await actualiser();
+  b.classList.remove('tourne');
+});
+
+// Exporter : les chiffres de la vue affichée, en CSV (s'ouvre dans Excel ou Numbers)
+$('exporter').addEventListener('click', () => {
+  preparerVue();
+  const enMois = periode === '12m';
+  const lignes = enMois
+    ? derniersMois(12).map((m) => [m, (mois[m] && mois[m].visiteurs) || 0, sommeMois(m, 'vues'), sommeMois(m, 'nouveaux'),
+      Object.keys(jours).filter((c) => c.startsWith(m)).reduce((t, c) => t + Object.keys((jours[c] && jours[c].pages) || {}).reduce((u, pg) => u + parties(c, pg), 0), 0)])
+    : derniersJours(Number(periode)).map((c) => [c, v(c, 'visiteurs'), v(c, 'vues'), v(c, 'nouveaux'),
+      Object.keys((jours[c] && jours[c].pages) || {}).reduce((u, pg) => u + parties(c, pg), 0)]);
+  const entete = [enMois ? 'Mois' : 'Jour', 'Visiteurs uniques', 'Pages vues', 'Nouveaux visiteurs', 'Parties jouées'];
+  const csv = '\ufeff' + [entete, ...lignes].map((l) => l.join(';')).join('\r\n');
+  const lien = document.createElement('a');
+  lien.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  lien.download = `stats-${selection === 'tous' ? 'tous-les-sites' : selection}-${periode === '12m' ? '12-mois' : `${periode}-jours`}-${jourDe()}.csv`;
+  document.body.appendChild(lien);
+  lien.click();
+  setTimeout(() => { URL.revokeObjectURL(lien.href); lien.remove(); }, 1000);
+});
+
+// Pilules du haut : la section visible est mise en avant
+const pilules = [...document.querySelectorAll('.pilule[data-section]')];
+const activerPilule = (nom) => pilules.forEach((p) => p.classList.toggle('actif', p.dataset.section === nom));
+pilules.forEach((p) => p.addEventListener('click', () => activerPilule(p.dataset.section)));
+if (typeof IntersectionObserver === 'function') {
+  const io = new IntersectionObserver((entrees) => {
+    const visible = entrees.filter((e) => e.isIntersecting).sort((x, y) => y.intersectionRatio - x.intersectionRatio)[0];
+    if (visible) activerPilule(visible.target.id.replace('section-', ''));
+  }, { threshold: [0.4, 0.7], rootMargin: '-80px 0px -30% 0px' });
+  ['section-apercu', 'section-pages', 'section-appareils'].forEach((id) => io.observe($(id)));
+}
+
 // ---------- Chargement ----------
-function etat(classe, texte) { const el = $('etat'); el.className = `direct ${classe}`; el.querySelector('span').textContent = texte; }
+function etat(classe, texte) { const el = $('etat'); el.className = `direct verre ${classe}`; el.querySelector('span').textContent = texte; }
 
 class Refus extends Error {}
 async function lire(base, chemin, params = {}) {
@@ -593,6 +669,10 @@ function remplirDemo() {
       pages: { accueil: 12, uno: 9, skyjo: 7, loupgarou: 6, undercover: 5, president: 5, petitbac: 4, poker: 4, cranes: 3, bataille: 3, puissance4: 3, tokyo: 2, kassen: 2, cluedo: 2, chevaux: 2, blackjack: 2, demineur: 1.5, mastermind: 1 } },
     pyrolos: { base: 6, pente: 0.03, weekend: 1.8, appli: 0.05, mobile: 0.6,
       pages: { carte: 10, itineraires: 6, meteo: 5, classement: 3, riders: 2, messages: 2, succes: 1.5 } },
+    mangazone: { base: 4, pente: 0.02, weekend: 1.3, appli: 0.35, mobile: 0.8,
+      pages: { discover: 8, collection: 6, series: 5, succes: 2 } },
+    animezone: { base: 5, pente: 0.04, weekend: 1.4, appli: 0.3, mobile: 0.78,
+      pages: { avenir: 8, decouvrir: 6, liste: 5, fiche: 5, profils: 2, succes: 2, profil: 1 } },
   };
   const tous = derniersJours(400);
   const aujourdhui = jourDe();

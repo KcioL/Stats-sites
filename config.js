@@ -3,6 +3,10 @@
 // Toutes les combien de secondes le tableau va chercher les nouveaux chiffres
 export const ACTUALISATION = 60;
 
+// Image de fond : un fichier du dépôt (par exemple 'fond.jpg', à mettre à côté de index.html)
+// ou une adresse https://… Laisser vide pour le dégradé par défaut.
+export const FOND = '';
+
 // Les sites affichés (la clé = le data-site mis dans la balise de suivi.js du site).
 // Le tableau va lire les chiffres de chaque site dans sa base, puis les additionne lui-même
 // pour la vue « Tous les sites ».
@@ -10,7 +14,8 @@ export const ACTUALISATION = 60;
 //              de suivi.js)   ← obligatoire
 //   nom      : nom affiché
 //   adresse  : adresse du site (facultatif) : sert au lien « Ouvrir » et au lien « Ne pas me compter »
-//   couleur  : couleur du site dans la vue « Tous les sites » (facultatif)
+//   couleur  : couleur du site (point dans la barre de gauche, vue « Tous les sites ») (facultatif)
+//   icone    : lettre ou emoji affiché dans la barre de gauche (facultatif : 1re lettre du nom)
 //   pages    : noms affichés des pages (clé = premier dossier de l'adresse, « accueil » pour la page d'accueil)
 export const SITES = {
   jeux: {
