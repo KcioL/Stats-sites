@@ -33,6 +33,11 @@ function jourDe(date = new Date()) {
   }).formatToParts(date).map((x) => [x.type, x.value]));
   return `${p.year}-${p.month}-${p.day}`;
 }
+// Heure (0 à 23) à Paris. formatToParts : en français, format() donne « 21 h », pas « 21 »
+function heureParis(date = new Date()) {
+  const h = new Intl.DateTimeFormat('en-GB', { timeZone: FUSEAU, hour: '2-digit', hourCycle: 'h23' }).formatToParts(date).find((x) => x.type === 'hour');
+  return Number(h && h.value) % 24;
+}
 const versDate = (cle) => { const [a, m, j] = cle.split('-').map(Number); return new Date(Date.UTC(a, m - 1, j || 1, 12)); };
 const versCle = (d) => d.toISOString().slice(0, 10);
 function decaler(cle, jours) { const d = versDate(cle); d.setUTCDate(d.getUTCDate() + jours); return versCle(d); }
@@ -102,7 +107,7 @@ function rendre() {
   const tous = selection === 'tous';
 
   // En-tête
-  const heure = Number(new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: 'numeric', hour12: false }).format(new Date()));
+  const heure = heureParis();
   $('salut').textContent = heure >= 5 && heure < 18 ? 'Bonjour 👋' : 'Bonsoir 👋';
   const date = fmt(aujourdhui, { weekday: 'long', day: 'numeric', month: 'long' });
   const nbSites = Object.keys(donnees).length;
@@ -576,10 +581,55 @@ function rendreFiche(animerFiche = false) {
   requestAnimationFrame(() => {
     if (animerFiche) { fiche.classList.add('anime'); setTimeout(() => fiche.classList.remove('anime'), 1400); }
     dessinerBarres($('fiche-graphe'), points);
+    // Heures des parties (ou des téléchargements) de cette page, sur la période
+    const entrees = journal(jours, cles, (e) => e.p === page);
+    $('fiche-heures-bloc').hidden = !entrees.length;
+    if (entrees.length) {
+      const toutesParties = entrees.every((e) => estPartie(e.a));
+      const unite = toutesParties ? ['partie', 'parties'] : [libAction(entrees[0].a, 1), libAction(entrees[0].a, 2)];
+      $('fiche-heures-titre').textContent = toutesParties ? 'À quelle heure on joue' : `Heures des ${unite[1]}`;
+      const pointe = dessinerHeures($('fiche-heures'), entrees, unite);
+      $('fiche-heures-note').textContent = `${nf.format(entrees.length)} ${entrees.length > 1 ? unite[1] : unite[0]} sur ${libPeriode}${pointe !== null ? ` · heure de pointe : ${pointe}h – ${pointe + 1}h` : ''}`;
+      $('fiche-journal').innerHTML = pastillesJournal(entrees.slice(0, 60), true);
+    }
   });
 }
 
 $('fiche-fermer').addEventListener('click', () => $('fiche').close());
+
+// ---------- Journal : heure exacte de chaque partie (ou action) ----------
+const fmtHeure = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' });
+const heureDe = (t) => heureParis(new Date(t));
+// Entrées du journal sur des jours donnés : [{ jour, a, p, t }], de la plus récente à la plus ancienne
+function journal(objJours, cles, filtre = () => true) {
+  const res = [];
+  for (const c of cles) for (const e of Object.values((objJours[c] && objJours[c].journal) || {})) {
+    if (e && typeof e.t === 'number' && filtre(e)) res.push({ jour: c, a: e.a, p: e.p, t: e.t });
+  }
+  return res.sort((x, y) => y.t - x.t);
+}
+const libAction = (a, n = 1) => (estPartie(a) ? (n > 1 ? 'parties' : 'partie') : nomAction(a, n));
+// Histogramme sur 24 heures dans un bloc .graphe ; renvoie l'heure de pointe
+function dessinerHeures(zone, entrees, unite) {
+  const parHeure = Array(24).fill(0);
+  for (const e of entrees) parHeure[heureDe(e.t)]++;
+  const pointe = parHeure.indexOf(Math.max(...parHeure));
+  dessinerBarres(zone, parHeure.map((n, h) => ({
+    cle: String(h), valeur: n, actuelle: n > 0 && h === pointe, unite,
+    etiquette: h % 3 === 0 ? `${h}h` : '',
+    titre: `De ${h}h à ${h + 1}h`,
+  })));
+  return parHeure[pointe] ? pointe : null;
+}
+// Petites pastilles d'heures : « 14:32 · en ligne »
+function pastillesJournal(entrees, avecJour) {
+  const auj = jourDe();
+  return entrees.map((e) => {
+    const jour = !avecJour ? '' : e.jour === auj ? "aujourd'hui · " : e.jour === decaler(auj, -1) ? 'hier · ' : `${fmt(e.jour, { weekday: 'short', day: 'numeric' })} · `;
+    const mode = estPartie(e.a) ? (MODES[e.a] ? nomMode(e.a).toLowerCase() : '') : nomAction(e.a, 1);
+    return `<li><span class="heure">${fmtHeure.format(new Date(e.t))}</span><span>${echapper(jour)}${echapper(mode)}</span></li>`;
+  }).join('');
+}
 
 // ---------- Détail d'un jour (ou d'un mois) : clic sur une barre du graphique principal ----------
 let jourOuvert = null;   // 'AAAA-MM-JJ' ou 'AAAA-MM'
@@ -639,7 +689,8 @@ function rendreJour(forcer = false) {
     act = actionsDans(jours, cles);
   }
   if (act.nbParties || avecParties(selection)) {
-    const detailModes = Object.entries(act.modes).sort((x, y) => y[1] - x[1]).map(([m, n]) => `${nomMode(m).toLowerCase()} : ${nf.format(n)}`).join(' · ');
+    const COURT = { 'parties-en-ligne': 'en ligne', 'parties-telephone': 'téléphone' };
+    const detailModes = Object.entries(act.modes).sort((x, y) => y[1] - x[1]).map(([m, n]) => `${COURT[m] || nomMode(m).toLowerCase()} : ${nf.format(n)}`).join(' · ');
     stats.push(['Parties jouées', act.nbParties, detailModes]);
   }
   for (const [nom, parPage] of Object.entries(act.autres)) {
@@ -671,6 +722,11 @@ function rendreJour(forcer = false) {
       if (np || (avecParties(selection) && pg !== 'accueil')) sous.push(`<span class="parties">${nf.format(np)} partie${np > 1 ? 's' : ''}</span>`);
       let poids = np;
       for (const [nom, pp] of Object.entries(act.autres)) if (pp[pg]) { sous.push(`<span class="parties">${nf.format(pp[pg])} ${echapper(nomAction(nom, pp[pg]))}</span>`); poids += pp[pg]; }
+      // heures des parties / actions de cette page ce jour-là
+      if (!enMois) {
+        const heures = journal(jours, cles, (e) => e.p === pg).reverse().map((e) => fmtHeure.format(new Date(e.t)));
+        if (heures.length) sous.push(`<span class="heures">à ${heures.slice(0, 8).join(', ')}${heures.length > 8 ? '…' : ''}</span>`);
+      }
       return { cle: pg, nom: nomPage(pg), valeur: parPage[pg] || 0, sous, poids };
     });
   }
@@ -679,6 +735,18 @@ function rendreJour(forcer = false) {
   lignes.forEach((l, i) => { if (!tous) l.accent = ACCENTS_J[i % ACCENTS_J.length]; });
   const max = Math.max(1, ...lignes.map((l) => l.valeur));
   const liste = $('jour-liste');
+  // Heure par heure : toutes les parties / actions de la journée (ou du mois)
+  const entreesJour = tous
+    ? Object.values(donnees).flatMap((d) => journal(d.jours || {}, cles))
+    : journal(jours, cles);
+  $('jour-heures-bloc').hidden = !entreesJour.length;
+  if (entreesJour.length) {
+    const toutesParties = entreesJour.every((e) => estPartie(e.a));
+    const unite = toutesParties ? ['partie', 'parties'] : ['action', 'actions'];
+    const pointe = dessinerHeures($('jour-heures'), entreesJour, unite);
+    $('jour-heures-titre').textContent = toutesParties ? 'Heure par heure' : 'Heure par heure (parties et téléchargements)';
+    $('jour-heures-note').textContent = pointe !== null ? `Heure de pointe : ${pointe}h – ${pointe + 1}h` : '';
+  }
   liste.innerHTML = lignes.filter((l) => l.valeur || l.poids).length ? lignes.filter((l) => l.valeur || l.poids).map((l, i) => `
     <li data-cle="${echapper(l.cle)}" tabindex="0" role="button" style="--accent:${l.accent}">
       <span class="rang">${String(i + 1).padStart(2, '0')}</span>
@@ -901,6 +969,8 @@ async function actualiser() {
 
 brancherBulle($('graphe'));
 brancherBulle($('fiche-graphe'));
+brancherBulle($('fiche-heures'));
+brancherBulle($('jour-heures'));
 
 if (DEMO) {
   remplirDemo();
@@ -962,7 +1032,16 @@ function remplirDemo() {
         actions = { telechargements: {} };
         for (const [p, taux] of Object.entries(mod.telechargements)) { const nb = Math.round((pages[p] || 0) * taux * (0.5 + alea())); if (nb) actions.telechargements[p] = nb; }
       }
-      j[c] = { visiteurs, vues: Math.round(visiteurs * (2.6 + alea() * 1.4)), nouveaux: Math.round(visiteurs * (0.3 + alea() * 0.2)),
+      // journal : une heure pour chaque partie / téléchargement, plutôt le soir
+      const journalDemo = {};
+      const [ay, am, ad] = c.split('-').map(Number);
+      for (const [a, parPage] of Object.entries(actions || {})) for (const [pg, nb] of Object.entries(parPage)) {
+        for (let k = 0; k < nb; k++) {
+          const h = Math.min(23, Math.floor(alea() < 0.6 ? 17 + alea() * 7 : 8 + alea() * 9));
+          journalDemo[`demo-${c}-${a}-${pg}-${k}`] = { a, p: pg, t: Date.UTC(ay, am - 1, ad, h - 1, Math.floor(alea() * 60)) };
+        }
+      }
+      j[c] = { journal: journalDemo, visiteurs, vues: Math.round(visiteurs * (2.6 + alea() * 1.4)), nouveaux: Math.round(visiteurs * (0.3 + alea() * 0.2)),
         appli: Math.round(visiteurs * mod.appli * (0.8 + alea() * 0.4)), appareils: { mobile, ordi: visiteurs - mobile }, pages, actions };
     });
     const m = {};

@@ -368,6 +368,18 @@ svg { flex: none; }
 .fiche-graphe-entete { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 22px 0 8px; flex-wrap: wrap; }
 .fiche-graphe-entete h3 { font-size: .95rem; }
 .graphe.petit-graphe { height: 240px; min-height: 240px; flex: none; }
+/* Heures des parties */
+.graphe.heures { height: 180px; min-height: 180px; }
+.graphe.heures .barre-v { width: min(100%, 12px); }
+.titre-journal { font-size: .9rem; margin: 18px 0 8px; }
+.journal { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; }
+.journal::-webkit-scrollbar { width: 6px; }
+.journal::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .26); border-radius: 999px; }
+.journal li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: .74rem; color: var(--texte-2);
+  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .08); }
+.journal .heure { color: var(--texte); font-weight: 600; font-variant-numeric: tabular-nums; }
+.classement .sous .heures { color: var(--texte-2); }
+
 /* Détail du jour */
 .jour-liste { max-height: 380px; }
 .rond:disabled { opacity: .35; cursor: default; }
@@ -431,7 +443,7 @@ svg { flex: none; }
   .fiche { padding: 18px 16px 20px; border-radius: 22px; width: calc(100% - 20px); }
   .fiche-entete h2 { font-size: 1.3rem; }
   .graphe.petit-graphe { height: 200px; min-height: 200px; }
-  .fiche-chiffres { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+  .fiche-chiffres { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .mini { padding: 10px; border-radius: 14px; }
   .mini span, .mini small { font-size: .68rem; }
   .mini strong { font-size: 1.2rem; }
