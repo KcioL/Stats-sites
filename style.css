@@ -368,13 +368,23 @@ svg { flex: none; }
 .fiche-graphe-entete { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 22px 0 8px; flex-wrap: wrap; }
 .fiche-graphe-entete h3 { font-size: .95rem; }
 .graphe.petit-graphe { height: 240px; min-height: 240px; flex: none; }
+/* Barres de défilement en verre, partout : fenêtres (fiche, détail du jour), listes et page */
+html, .fiche, .journal, .classement { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; }
+html::-webkit-scrollbar, .fiche::-webkit-scrollbar, .journal::-webkit-scrollbar { width: 6px; height: 6px; }
+html::-webkit-scrollbar-track, .fiche::-webkit-scrollbar-track, .journal::-webkit-scrollbar-track { background: transparent; }
+.fiche::-webkit-scrollbar-track { margin: 22px 0; } /* la barre ne déborde pas des coins arrondis */
+html::-webkit-scrollbar-thumb, .fiche::-webkit-scrollbar-thumb, .journal::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .26); border-radius: 999px; border: 1px solid rgba(255, 255, 255, .12);
+}
+html::-webkit-scrollbar-thumb:hover, .fiche::-webkit-scrollbar-thumb:hover, .journal::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .42); }
+html::-webkit-scrollbar-corner, .fiche::-webkit-scrollbar-corner { background: transparent; }
+html { background: #1c1c1e; }
+
 /* Heures des parties */
 .graphe.heures { height: 180px; min-height: 180px; }
 .graphe.heures .barre-v { width: min(100%, 12px); }
 .titre-journal { font-size: .9rem; margin: 18px 0 8px; }
-.journal { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; }
-.journal::-webkit-scrollbar { width: 6px; }
-.journal::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .26); border-radius: 999px; }
+.journal { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; }
 .journal li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: .74rem; color: var(--texte-2);
   background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .08); }
 .journal .heure { color: var(--texte); font-weight: 600; font-variant-numeric: tabular-nums; }
