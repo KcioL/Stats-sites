@@ -378,7 +378,6 @@ html::-webkit-scrollbar-thumb, .fiche::-webkit-scrollbar-thumb, .journal::-webki
 }
 html::-webkit-scrollbar-thumb:hover, .fiche::-webkit-scrollbar-thumb:hover, .journal::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .42); }
 html::-webkit-scrollbar-corner, .fiche::-webkit-scrollbar-corner { background: transparent; }
-html { background: #1c1c1e; }
 
 /* Heures des parties */
 .graphe.heures { height: 180px; min-height: 180px; }
