@@ -386,8 +386,23 @@ html::-webkit-scrollbar-corner, .fiche::-webkit-scrollbar-corner { background: t
 .graphe.heures .barre-v { width: min(100%, 12px); }
 .titre-journal { font-size: .9rem; margin: 18px 0 8px; }
 .journal { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; }
-.journal li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: .74rem; color: var(--texte-2);
-  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .08); }
+.journal li { display: contents; }
+.journal .pastille { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: .74rem; color: var(--texte-2);
+  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .08); cursor: pointer; transition: background .2s, border-color .2s; }
+.journal .pastille:hover { background: rgba(255, 255, 255, .14); }
+.journal .pastille.choisie { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .45); color: var(--texte); }
+/* Détail d'une partie */
+.partie-detail { margin-top: 12px; padding: 14px 16px; border-radius: 16px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .1); }
+.partie-entete { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.partie-entete h4 { font-size: .92rem; font-weight: 600; }
+.rond.petit-rond { width: 30px; height: 30px; font-size: 1.1rem; line-height: 1; }
+.partie-chiffre { display: flex; align-items: baseline; gap: 8px; margin: 2px 0 10px; }
+.partie-chiffre strong { font-size: 2rem; font-weight: 600; color: color-mix(in srgb, var(--or) 80%, white); font-variant-numeric: tabular-nums; }
+.partie-chiffre span { color: var(--texte-2); font-size: .85rem; }
+.partie-detail .note { margin: 0 0 10px; }
+.partie-infos { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px 14px; }
+.partie-infos dt { font-size: .7rem; color: var(--texte-3); }
+.partie-infos dd { font-size: .84rem; color: var(--texte); margin: 2px 0 0; }
 .journal .heure { color: var(--texte); font-weight: 600; font-variant-numeric: tabular-nums; }
 .classement .sous .heures { color: var(--texte-2); white-space: normal; overflow-wrap: anywhere; }
 

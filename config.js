@@ -21,6 +21,7 @@ export const FOND_TELEPHONE = 'fond-telephone.jpg';
 //   logo     : image ronde affichée dans la barre de gauche (fichier du dossier logos/, ou adresse https://)
 //   icone    : lettre ou emoji affiché à la place, s'il n'y a pas de logo (facultatif : 1re lettre du nom)
 //   parties  : true pour un site de jeux : le classement peut trier les jeux par parties jouées
+//   manches  : pages (jeux) en plusieurs manches ; mains : pareil, pour des « mains » (Poker, Blackjack)
 //   actions  : noms affichés des autres actions comptées par le site, au singulier et au pluriel
 //              (ex. téléchargements) ; les « parties » ont déjà leur affichage
 //   pages    : noms affichés des pages (clé = premier dossier de l'adresse, « accueil » pour la page d'accueil)
@@ -29,8 +30,11 @@ export const SITES = {
     logo: 'logos/jeux.png',
     nom: 'Jeux',
     parties: true,
+    // jeux en plusieurs manches (ou mains) : la fiche d'une partie montre combien en ont été jouées
+    manches: ['president', 'cranes', 'kassen', 'petitbac', 'puissance4', 'skyjo'],
+    mains: ['poker', 'blackjack'],
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: 'https://kciol.github.io/Games/', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
+    adresse: '', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
     couleur: '#F2B632',
     pages: {
       accueil: 'Menu', uno: 'UNO', skyjo: 'Skyjo', blackjack: 'Blackjack', poker: 'Poker',
@@ -45,7 +49,7 @@ export const SITES = {
     logo: 'logos/pyrolos.png',
     nom: 'Pyrolos',
     base: 'https://pyrolos-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: 'https://kciol.github.io/Pyrolos/', // par exemple 'https://ton-pseudo.github.io/Pyrolos/'
+    adresse: '', // par exemple 'https://ton-pseudo.github.io/Pyrolos/'
     couleur: '#4F8DE0',
     pages: {
       carte: 'Carte', itineraires: 'Itinéraires', riders: 'Rouler ensemble', messages: 'Messages',
@@ -56,7 +60,7 @@ export const SITES = {
     logo: 'logos/mangazone.png',
     nom: 'MangaZone',
     base: 'https://manga-2a40b-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: 'https://kciol.github.io/MangaZone/', // par exemple 'https://ton-pseudo.github.io/MangaZone/'
+    adresse: '', // par exemple 'https://ton-pseudo.github.io/MangaZone/'
     couleur: '#F0697C',
     pages: { discover: 'Découvrir', collection: 'Collection', succes: 'Succès', series: 'Fiche d’une série' },
   },
@@ -64,7 +68,7 @@ export const SITES = {
     logo: 'logos/animezone.png',
     nom: 'AnimeZone',
     base: 'https://animezone-8d2f5-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: 'https://kciol.github.io/AnimeZone/', // par exemple 'https://ton-pseudo.github.io/AnimeZone/'
+    adresse: '', // par exemple 'https://ton-pseudo.github.io/AnimeZone/'
     couleur: '#9B7BEA',
     pages: {
       avenir: 'À venir', decouvrir: 'Découvrir', succes: 'Succès', profils: 'Profils', liste: 'Ma liste',
@@ -76,7 +80,7 @@ export const SITES = {
     nom: 'Portfolio',
     // pas de base à lui : ses chiffres sont rangés dans celle du site de jeux
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: 'https://kciol.github.io/Portfolio/', // par exemple 'https://ton-pseudo.github.io/Portfolio/'
+    adresse: '', // par exemple 'https://ton-pseudo.github.io/Portfolio/'
     couleur: '#00EEFF',
     pages: {
       accueil: 'Accueil', 'a-propos': 'À propos', projets: 'Projets', cv: 'CV', contact: 'Contact',

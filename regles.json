@@ -42,6 +42,28 @@
                   ".validate": "newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
                 }
               }
+            },
+            "journal": {
+              "$id": {
+                ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/) && $id.matches(/^[a-z0-9-]{6,40}$/) && !data.exists()",
+                ".validate": "newData.hasChildren(['a', 'p', 't'])",
+                "a": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9-]{2,40}$/)"
+                },
+                "p": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9-]{2,40}$/)"
+                },
+                "t": {
+                  ".validate": "newData.isNumber() && newData.val() == now"
+                },
+                "m": {
+                  ".write": "data.parent().exists() && $id.matches(/^[a-z0-9-]{6,40}$/)",
+                  ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 999 && (!data.exists() || newData.val() > data.val())"
+                },
+                "$autre": {
+                  ".validate": false
+                }
+              }
             }
           }
         },

@@ -23,8 +23,11 @@
  *
  * Actions : window.suivi.action('parties-en-ligne', 'uno') ajoute 1 à
  *   stats/<site>/jours/AAAA-MM-JJ/actions/<action>/<page>   et   stats/<site>/total/actions/<action>/<page>
- * (une partie lancée, un formulaire envoyé…). Sans <page> : la page actuelle. Le tableau de bord affiche
+ * (une partie lancée, un formulaire envoyé…). Sans <page> : la page actuelle. Chaque action est aussi
+ * notée dans stats/<site>/jours/AAAA-MM-JJ/journal/<id> = { a: action, p: page, t: heure du serveur }. Le tableau de bord affiche
  * les actions dont le nom commence par « parties » comme des parties jouées, avec le détail par mode.
+ * Pour une partie en plusieurs manches : const ref = window.suivi.action('parties-telephone', 'skyjo', { m: 1 })
+ * note m (nombre de manches) dans le journal, puis window.suivi.manches(ref, 3) le met à jour.
  *
  * Pas compté : localhost, hors connexion, et un appareil où l'on a ouvert le site avec ?suivi=off
  * (?suivi=on pour annuler).
@@ -119,12 +122,29 @@
     envoyer(maj);
   }
 
-  function action(nom, page) {
+  function action(nom, page, details) {
     const a = nettoyer(nom);
     const p = nettoyer(page) || pageCourante;
-    if (!a || horsJeu() || !stockage()) return;
+    if (!a || horsJeu() || !stockage()) return null;
     const s = `stats/${site}`;
-    envoyer({ [`${s}/jours/${jourDe(new Date())}/actions/${a}/${p}`]: UN, [`${s}/total/actions/${a}/${p}`]: UN });
+    const jour = jourDe(new Date());
+    envoyer({ [`${s}/jours/${jour}/actions/${a}/${p}`]: UN, [`${s}/total/actions/${a}/${p}`]: UN });
+    // Journal : l'heure exacte de l'action (donnée par le serveur), pour le détail heure par heure.
+    // Envoyé à part : si les règles de la base n'ont pas encore le journal, les compteurs marchent quand même.
+    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const entree = { a, p, t: { '.sv': 'timestamp' } };
+    const m = details && Number(details.m);
+    if (Number.isInteger(m) && m >= 1 && m <= 999) entree.m = m;
+    envoyer({ [`${s}/jours/${jour}/journal/${id}`]: entree });
+    return { jour, id, m: entree.m || 0 }; // pour window.suivi.manches(ref, n)
+  }
+
+  // Nombre de manches jouées d'une partie déjà notée au journal (seulement s'il augmente)
+  function manches(ref, n) {
+    n = Number(n);
+    if (!ref || !ref.id || !Number.isInteger(n) || n < 1 || n > 999 || n <= ref.m || horsJeu()) return;
+    ref.m = n;
+    envoyer({ [`stats/${site}/jours/${ref.jour}/journal/${ref.id}/m`]: n });
   }
 
   // Première page : comptée un peu après l'ouverture, pour ne pas ralentir le site
@@ -143,5 +163,6 @@
       compter(page);
     },
     action,
+    manches,
   };
 })();

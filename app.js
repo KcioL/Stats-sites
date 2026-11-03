@@ -494,6 +494,7 @@ let pageOuverte = null;
 let serieFiche = 'parties';
 
 function ouvrirFiche(page) {
+  if (page !== pageOuverte) partieChoisie = null;
   pageOuverte = page;
   const fiche = $('fiche');
   serieFiche = null;
@@ -598,8 +599,18 @@ function rendreFiche(animerFiche = false) {
       $('fiche-heures-titre').textContent = toutesParties ? 'À quelle heure on joue' : `Heures des ${unite[1]}`;
       const pointe = dessinerHeures($('fiche-heures'), entrees, unite);
       $('fiche-heures-note').textContent = `${nf.format(entrees.length)} ${entrees.length > 1 ? unite[1] : unite[0]} sur ${libPeriode}${pointe !== null ? ` · heure de pointe : ${pointe}h – ${pointe + 1}h` : ''}`;
+      // moyenne des manches, sur les parties où elles sont notées
+      const unitM = toutesParties ? uniteManches(selection, page) : null;
+      const avecM = unitM ? entrees.filter((e) => e.m) : [];
+      if (avecM.length) {
+        const moy = avecM.reduce((s, e) => s + e.m, 0) / avecM.length;
+        $('fiche-heures-note').textContent += ` · ${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(moy)} ${unitM[1]} par partie en moyenne`;
+      }
+      entreesFiche = entrees;
+      $('fiche-journal-titre').textContent = toutesParties ? 'Une par une · touche une partie' : 'Une par une';
       $('fiche-journal').innerHTML = pastillesJournal(entrees, true); // toutes les parties (liste qui défile)
-    }
+    } else entreesFiche = [];
+    rendrePartie();
   });
 }
 
@@ -622,8 +633,8 @@ const heureDe = (t) => heureParis(new Date(t));
 // Entrées du journal sur des jours donnés : [{ jour, a, p, t }], de la plus récente à la plus ancienne
 function journal(objJours, cles, filtre = () => true) {
   const res = [];
-  for (const c of cles) for (const e of Object.values((objJours[c] && objJours[c].journal) || {})) {
-    if (e && typeof e.t === 'number' && filtre(e)) res.push({ jour: c, a: e.a, p: e.p, t: e.t });
+  for (const c of cles) for (const [id, e] of Object.entries((objJours[c] && objJours[c].journal) || {})) {
+    if (e && typeof e.t === 'number' && filtre(e)) res.push({ id, jour: c, a: e.a, p: e.p, t: e.t, m: typeof e.m === 'number' ? e.m : 0 });
   }
   return res.sort((x, y) => y.t - x.t);
 }
@@ -646,9 +657,64 @@ function pastillesJournal(entrees, avecJour) {
   return entrees.map((e) => {
     const jour = !avecJour ? '' : e.jour === auj ? "aujourd'hui · " : e.jour === decaler(auj, -1) ? 'hier · ' : `${fmt(e.jour, { weekday: 'short', day: 'numeric' })} · `;
     const mode = estPartie(e.a) ? (MODES[e.a] ? nomMode(e.a).toLowerCase() : '') : nomAction(e.a, 1);
-    return `<li title="${fmtSeconde.format(new Date(e.t))}"><span class="heure">${fmtHeure.format(new Date(e.t))}</span><span>${echapper(jour)}${echapper(mode)}</span></li>`;
+    const choisie = e.id === partieChoisie ? ' choisie' : '';
+    return `<li><button type="button" class="pastille${choisie}" data-id="${echapper(e.id)}" title="${fmtSeconde.format(new Date(e.t))}"><span class="heure">${fmtHeure.format(new Date(e.t))}</span><span>${echapper(jour)}${echapper(mode)}</span></button></li>`;
   }).join('');
 }
+
+// ---------- Détail d'une partie : clic sur une heure dans la fiche d'un jeu ----------
+let partieChoisie = null;   // id de l'entrée du journal affichée
+let entreesFiche = [];      // entrées affichées dans la fiche
+// Jeux en plusieurs manches (config.js : manches / mains du site) : [singulier, pluriel], ou null
+function uniteManches(site, page) {
+  const cfg = SITES[site] || {};
+  if ((cfg.mains || []).includes(page)) return ['main', 'mains'];
+  if ((cfg.manches || []).includes(page)) return ['manche', 'manches'];
+  return null;
+}
+function rendrePartie() {
+  const zone = $('fiche-partie');
+  const e = entreesFiche.find((x) => x.id === partieChoisie);
+  if (!e) { zone.hidden = true; return; }
+  const partie = estPartie(e.a);
+  const unite = partie ? uniteManches(selection, e.p) : null;
+  // numéro de la partie dans la journée (de ce jeu)
+  const duJour = entreesFiche.filter((x) => x.jour === e.jour && estPartie(x.a) === partie).sort((x, y) => x.t - y.t);
+  const rang = duJour.findIndex((x) => x.id === e.id) + 1;
+  const lignes = [
+    ['Jour', fmt(e.jour, { weekday: 'long', day: 'numeric', month: 'long' })],
+    ['Heure', fmtSeconde.format(new Date(e.t))],
+  ];
+  if (partie && MODES[e.a]) lignes.push(['Mode', nomMode(e.a)]);
+  if (partie) lignes.push(['Partie du jour', `${nf.format(rang)}${rang === 1 ? 're' : 'e'} sur ${nf.format(duJour.length)}`]);
+  let grand = '';
+  if (unite) {
+    grand = e.m
+      ? `<div class="partie-chiffre"><strong>${nf.format(e.m)}</strong><span>${e.m > 1 ? unite[1] : unite[0]} jouée${e.m > 1 ? 's' : ''}</span></div>`
+      : `<p class="note">Nombre de ${unite[1]} pas noté : partie lancée avant la mise à jour du site de jeux.</p>`;
+  } else if (partie) {
+    grand = '<p class="note">Jeu sans manches : une partie se joue d’une traite.</p>';
+  }
+  zone.innerHTML = `<div class="partie-entete"><h4>${partie ? 'Partie' : echapper(joli(nomAction(e.a, 1)))} de ${fmtHeure.format(new Date(e.t))}</h4>`
+    + `<button type="button" class="rond verre petit-rond" id="partie-fermer" aria-label="Fermer le détail">×</button></div>`
+    + grand
+    + `<dl class="partie-infos">${lignes.map(([k, v]) => `<div><dt>${k}</dt><dd>${echapper(v)}</dd></div>`).join('')}</dl>`;
+  zone.hidden = false;
+}
+$('fiche-journal').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-id]');
+  if (!b) return;
+  partieChoisie = partieChoisie === b.dataset.id ? null : b.dataset.id;
+  $('fiche-journal').querySelectorAll('.pastille').forEach((x) => x.classList.toggle('choisie', x.dataset.id === partieChoisie));
+  rendrePartie();
+  if (partieChoisie) $('fiche-partie').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+});
+$('fiche-partie').addEventListener('click', (ev) => {
+  if (!ev.target.closest('#partie-fermer')) return;
+  partieChoisie = null;
+  $('fiche-journal').querySelectorAll('.pastille.choisie').forEach((x) => x.classList.remove('choisie'));
+  rendrePartie();
+});
 
 // ---------- Détail d'un jour (ou d'un mois) : clic sur une barre du graphique principal ----------
 let jourOuvert = null;   // 'AAAA-MM-JJ' ou 'AAAA-MM'
@@ -1058,6 +1124,7 @@ function remplirDemo() {
         for (let k = 0; k < nb; k++) {
           const h = Math.min(23, Math.floor(alea() < 0.6 ? 17 + alea() * 7 : 8 + alea() * 9));
           journalDemo[`demo-${c}-${a}-${pg}-${k}`] = { a, p: pg, t: Date.UTC(ay, am - 1, ad, h - 1, Math.floor(alea() * 60)) };
+          if (uniteManches(id, pg)) journalDemo[`demo-${c}-${a}-${pg}-${k}`].m = 1 + Math.floor(alea() * 8);
         }
       }
       j[c] = { journal: journalDemo, visiteurs, vues: Math.round(visiteurs * (2.6 + alea() * 1.4)), nouveaux: Math.round(visiteurs * (0.3 + alea() * 0.2)),
