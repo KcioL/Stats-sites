@@ -15,6 +15,57 @@ const fondTel = CONFIG.FOND_TELEPHONE || fondPc;
 if (fondPc) document.documentElement.style.setProperty('--image-fond', urlFond(fondPc));
 if (fondTel) document.documentElement.style.setProperty('--image-fond-tel', urlFond(fondTel));
 
+// ---------- Verre rapide (ordinateur) ----------
+// Le flou en direct (backdrop-filter) est recalculé à chaque image pour chaque carte : sur un grand écran,
+// ou si le navigateur n'utilise pas la carte graphique, les animations deviennent saccadées.
+// Le fond ne bouge pas : on le floute donc une seule fois, dans une image, que les cartes affichent
+// à travers elles (même rendu, presque rien à calculer). Sur téléphone, le flou en direct est gardé.
+function verreRapide() {
+  const ordi = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (!ordi || !fondPc) return;
+  const essai = document.createElement('canvas').getContext('2d');
+  if (!essai || !('filter' in essai)) return; // navigateur sans flou de canvas (Safari) : flou en direct
+  const cache = {};
+  const charger = (f) => cache[f] || (cache[f] = new Promise((ok, ko) => {
+    const img = new Image(); img.onload = () => ok(img); img.onerror = ko; img.src = f;
+  }));
+  let jeton = 0, url = '';
+  async function dessiner() {
+    const n = ++jeton;
+    const w = innerWidth, h = innerHeight;
+    const f = matchMedia('(orientation: portrait)').matches ? fondTel : fondPc;
+    let img;
+    try { img = await charger(f); } catch (e) { document.documentElement.classList.remove('verre-rapide'); return; }
+    if (n !== jeton) return;
+    // un quart de la taille de l'écran suffit : l'image est floue de toute façon
+    const e = 0.25, cw = Math.max(1, Math.round(w * e)), ch = Math.max(1, Math.round(h * e));
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    const x = c.getContext('2d');
+    // l'image comme le fond (cover, centrée), un peu débordante pour que le flou n'assombrisse pas les bords
+    const marge = 26 * e * 3;
+    const r = Math.max((cw + 2 * marge) / img.naturalWidth, (ch + 2 * marge) / img.naturalHeight);
+    const iw = img.naturalWidth * r, ih = img.naturalHeight * r;
+    x.filter = `blur(${26 * e}px) saturate(150%)`;
+    x.drawImage(img, (cw - iw) / 2, (ch - ih) / 2, iw, ih);
+    x.filter = 'none';
+    // le voile sombre du fond (voir .fond dans style.css)
+    const g = x.createLinearGradient(0, 0, 0, ch);
+    g.addColorStop(0, 'rgba(0,0,0,.28)'); g.addColorStop(0.4, 'rgba(0,0,0,.12)'); g.addColorStop(1, 'rgba(0,0,0,.38)');
+    x.fillStyle = g; x.fillRect(0, 0, cw, ch);
+    c.toBlob((b) => {
+      if (!b || n !== jeton) return;
+      if (url) URL.revokeObjectURL(url);
+      url = URL.createObjectURL(b);
+      document.documentElement.style.setProperty('--fond-flou', `url("${url}")`);
+      document.documentElement.classList.add('verre-rapide');
+    }, 'image/png');
+  }
+  let minuterie = 0;
+  addEventListener('resize', () => { clearTimeout(minuterie); minuterie = setTimeout(dessiner, 200); });
+  dessiner();
+}
+verreRapide();
+
 const sansSlash = (u) => String(u || '').trim().replace(/\/+$/, '');
 
 const FUSEAU = 'Europe/Paris';
@@ -583,7 +634,15 @@ function rendreFiche(animerFiche = false) {
     dessinerBarres($('fiche-graphe'), points);
     // Heures des parties (ou des téléchargements) de cette page, sur la période
     const entrees = journal(jours, cles, (e) => e.p === page);
-    $('fiche-heures-bloc').hidden = !entrees.length;
+    // Visible dès qu'il y a des heures, et toujours pour un jeu (avec un message tant qu'il n'y en a pas)
+    const jeu = avecParties(selection) && page !== 'accueil';
+    $('fiche-heures-bloc').hidden = !entrees.length && !jeu;
+    $('fiche-heures').hidden = !entrees.length;
+    $('fiche-journal-bloc').hidden = !entrees.length;
+    if (!entrees.length && jeu) {
+      $('fiche-heures-titre').textContent = 'À quelle heure on joue';
+      $('fiche-heures-note').textContent = `Aucune heure enregistrée sur ${libPeriode} : l'heure est notée pour les parties lancées depuis la mise à jour du site de jeux (suivi.js et règles Firebase).`;
+    }
     if (entrees.length) {
       const toutesParties = entrees.every((e) => estPartie(e.a));
       const unite = toutesParties ? ['partie', 'parties'] : [libAction(entrees[0].a, 1), libAction(entrees[0].a, 2)];

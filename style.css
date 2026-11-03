@@ -68,6 +68,16 @@ svg { flex: none; }
   -webkit-backdrop-filter: var(--flou);
   backdrop-filter: var(--flou);
 }
+/* Verre rapide (ordinateur, posé par app.js) : les grandes cartes montrent une copie du fond floutée
+   une seule fois, au lieu de flouter en direct à chaque image (bien plus fluide sur un grand écran) */
+html.verre-rapide .carte.verre {
+  --teinte-verre: var(--verre);
+  background: linear-gradient(var(--teinte-verre), var(--teinte-verre)), var(--fond-flou) center / cover fixed;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+@media (hover: hover) {
+  html.verre-rapide .carte.verre:hover { --teinte-verre: rgba(48, 48, 54, .38); background: linear-gradient(var(--teinte-verre), var(--teinte-verre)), var(--fond-flou) center / cover fixed; }
+}
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .verre { background: rgba(40, 40, 44, .88); }
 }
@@ -114,10 +124,12 @@ svg { flex: none; }
 .pilule:hover { color: var(--texte); background: var(--verre-fort); }
 .pilule.actif { color: var(--texte); background: rgba(20, 20, 22, .55); }
 .direct { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; font-size: .8rem; color: var(--texte-2); white-space: nowrap; }
-.direct i { width: 8px; height: 8px; border-radius: 50%; background: var(--texte-3); flex: none; }
-.direct.ok i { background: var(--vert); animation: pouls 2s infinite; }
+.direct i { width: 8px; height: 8px; border-radius: 50%; background: var(--texte-3); flex: none; position: relative; }
+.direct.ok i { background: var(--vert); }
+/* l'onde du voyant : agrandie et estompée (transform + opacity, sans redessiner le verre autour) */
+.direct.ok i::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--vert); animation: pouls 2s infinite; }
 .direct.erreur i { background: var(--rouge); }
-@keyframes pouls { 0% { box-shadow: 0 0 0 0 rgba(63, 191, 127, .55); } 70% { box-shadow: 0 0 0 8px rgba(63, 191, 127, 0); } 100% { box-shadow: 0 0 0 0 rgba(63, 191, 127, 0); } }
+@keyframes pouls { 0% { transform: scale(1); opacity: .55; } 70%, 100% { transform: scale(3); opacity: 0; } }
 .avatar {
   position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none;
   font-weight: 600; font-size: .9rem; color: #1c1c1e;
@@ -194,7 +206,7 @@ svg { flex: none; }
 .apparait .carte:nth-child(4) { animation-delay: .12s; } .apparait .carte:nth-child(5) { animation-delay: .16s; }
 .apparait .carte:nth-child(6) { animation-delay: .2s; } .apparait .carte:nth-child(7) { animation-delay: .24s; }
 .apparait .carte:nth-child(8) { animation-delay: .28s; } .apparait .carte:nth-child(9) { animation-delay: .32s; }
-@keyframes sortDuFlou { from { opacity: 0; filter: blur(14px); transform: translateY(16px) scale(.985); } }
+@keyframes sortDuFlou { from { opacity: 0; transform: translateY(16px) scale(.985); } }
 
 .entete-carte { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .entete-carte h2 { font-size: 1rem; }
