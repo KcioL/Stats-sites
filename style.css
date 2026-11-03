@@ -68,16 +68,6 @@ svg { flex: none; }
   -webkit-backdrop-filter: var(--flou);
   backdrop-filter: var(--flou);
 }
-/* Verre rapide (ordinateur, posé par app.js) : les grandes cartes montrent une copie du fond floutée
-   une seule fois, au lieu de flouter en direct à chaque image (bien plus fluide sur un grand écran) */
-html.verre-rapide .carte.verre {
-  --teinte-verre: var(--verre);
-  background: linear-gradient(var(--teinte-verre), var(--teinte-verre)), var(--fond-flou) center / cover fixed;
-  -webkit-backdrop-filter: none; backdrop-filter: none;
-}
-@media (hover: hover) {
-  html.verre-rapide .carte.verre:hover { --teinte-verre: rgba(48, 48, 54, .38); background: linear-gradient(var(--teinte-verre), var(--teinte-verre)), var(--fond-flou) center / cover fixed; }
-}
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .verre { background: rgba(40, 40, 44, .88); }
 }
