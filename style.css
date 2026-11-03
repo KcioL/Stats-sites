@@ -385,11 +385,11 @@ html::-webkit-scrollbar-corner, .fiche::-webkit-scrollbar-corner { background: t
 .graphe.heures { height: 180px; min-height: 180px; }
 .graphe.heures .barre-v { width: min(100%, 12px); }
 .titre-journal { font-size: .9rem; margin: 18px 0 8px; }
-.journal { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; }
+.journal { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; }
 .journal li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: .74rem; color: var(--texte-2);
   background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .08); }
 .journal .heure { color: var(--texte); font-weight: 600; font-variant-numeric: tabular-nums; }
-.classement .sous .heures { color: var(--texte-2); }
+.classement .sous .heures { color: var(--texte-2); white-space: normal; overflow-wrap: anywhere; }
 
 /* Détail du jour */
 .jour-liste { max-height: 380px; }

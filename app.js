@@ -598,7 +598,7 @@ function rendreFiche(animerFiche = false) {
       $('fiche-heures-titre').textContent = toutesParties ? 'À quelle heure on joue' : `Heures des ${unite[1]}`;
       const pointe = dessinerHeures($('fiche-heures'), entrees, unite);
       $('fiche-heures-note').textContent = `${nf.format(entrees.length)} ${entrees.length > 1 ? unite[1] : unite[0]} sur ${libPeriode}${pointe !== null ? ` · heure de pointe : ${pointe}h – ${pointe + 1}h` : ''}`;
-      $('fiche-journal').innerHTML = pastillesJournal(entrees.slice(0, 60), true);
+      $('fiche-journal').innerHTML = pastillesJournal(entrees, true); // toutes les parties (liste qui défile)
     }
   });
 }
@@ -607,6 +607,17 @@ $('fiche-fermer').addEventListener('click', () => $('fiche').close());
 
 // ---------- Journal : heure exacte de chaque partie (ou action) ----------
 const fmtHeure = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' });
+const fmtSeconde = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+// Heures à la suite, celles de la même minute regroupées : « 13:44 ×3, 14:02 »
+function heuresGroupees(entrees) {
+  const res = [];
+  for (const e of entrees) {
+    const h = fmtHeure.format(new Date(e.t));
+    if (res.length && res[res.length - 1].h === h) res[res.length - 1].n++;
+    else res.push({ h, n: 1 });
+  }
+  return res.map((x) => (x.n > 1 ? `${x.h} ×${x.n}` : x.h)).join(', ');
+}
 const heureDe = (t) => heureParis(new Date(t));
 // Entrées du journal sur des jours donnés : [{ jour, a, p, t }], de la plus récente à la plus ancienne
 function journal(objJours, cles, filtre = () => true) {
@@ -635,7 +646,7 @@ function pastillesJournal(entrees, avecJour) {
   return entrees.map((e) => {
     const jour = !avecJour ? '' : e.jour === auj ? "aujourd'hui · " : e.jour === decaler(auj, -1) ? 'hier · ' : `${fmt(e.jour, { weekday: 'short', day: 'numeric' })} · `;
     const mode = estPartie(e.a) ? (MODES[e.a] ? nomMode(e.a).toLowerCase() : '') : nomAction(e.a, 1);
-    return `<li><span class="heure">${fmtHeure.format(new Date(e.t))}</span><span>${echapper(jour)}${echapper(mode)}</span></li>`;
+    return `<li title="${fmtSeconde.format(new Date(e.t))}"><span class="heure">${fmtHeure.format(new Date(e.t))}</span><span>${echapper(jour)}${echapper(mode)}</span></li>`;
   }).join('');
 }
 
@@ -732,8 +743,8 @@ function rendreJour(forcer = false) {
       for (const [nom, pp] of Object.entries(act.autres)) if (pp[pg]) { sous.push(`<span class="parties">${nf.format(pp[pg])} ${echapper(nomAction(nom, pp[pg]))}</span>`); poids += pp[pg]; }
       // heures des parties / actions de cette page ce jour-là
       if (!enMois) {
-        const heures = journal(jours, cles, (e) => e.p === pg).reverse().map((e) => fmtHeure.format(new Date(e.t)));
-        if (heures.length) sous.push(`<span class="heures">à ${heures.slice(0, 8).join(', ')}${heures.length > 8 ? '…' : ''}</span>`);
+        const heures = journal(jours, cles, (e) => e.p === pg).reverse();
+        if (heures.length) sous.push(`<span class="heures">à ${heuresGroupees(heures)}</span>`);
       }
       return { cle: pg, nom: nomPage(pg), valeur: parPage[pg] || 0, sous, poids };
     });
