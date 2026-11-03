@@ -34,7 +34,7 @@ export const SITES = {
     manches: ['president', 'cranes', 'kassen', 'petitbac', 'puissance4', 'skyjo'],
     mains: ['poker', 'blackjack'],
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
+    adresse: 'https://kciol.github.io/Games/', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
     couleur: '#F2B632',
     pages: {
       accueil: 'Menu', uno: 'UNO', skyjo: 'Skyjo', blackjack: 'Blackjack', poker: 'Poker',
@@ -49,7 +49,7 @@ export const SITES = {
     logo: 'logos/pyrolos.png',
     nom: 'Pyrolos',
     base: 'https://pyrolos-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/Pyrolos/'
+    adresse: 'https://kciol.github.io/Pyrolos/', // par exemple 'https://ton-pseudo.github.io/Pyrolos/'
     couleur: '#4F8DE0',
     pages: {
       carte: 'Carte', itineraires: 'Itinéraires', riders: 'Rouler ensemble', messages: 'Messages',
@@ -60,7 +60,7 @@ export const SITES = {
     logo: 'logos/mangazone.png',
     nom: 'MangaZone',
     base: 'https://manga-2a40b-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/MangaZone/'
+    adresse: 'https://kciol.github.io/Mangazone/', // par exemple 'https://ton-pseudo.github.io/MangaZone/'
     couleur: '#F0697C',
     pages: { discover: 'Découvrir', collection: 'Collection', succes: 'Succès', series: 'Fiche d’une série' },
   },
@@ -68,7 +68,7 @@ export const SITES = {
     logo: 'logos/animezone.png',
     nom: 'AnimeZone',
     base: 'https://animezone-8d2f5-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/AnimeZone/'
+    adresse: 'https://kciol.github.io/AnimeZone/', // par exemple 'https://ton-pseudo.github.io/AnimeZone/'
     couleur: '#9B7BEA',
     pages: {
       avenir: 'À venir', decouvrir: 'Découvrir', succes: 'Succès', profils: 'Profils', liste: 'Ma liste',
@@ -80,7 +80,7 @@ export const SITES = {
     nom: 'Portfolio',
     // pas de base à lui : ses chiffres sont rangés dans celle du site de jeux
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
-    adresse: '', // par exemple 'https://ton-pseudo.github.io/Portfolio/'
+    adresse: 'https://kciol.github.io/Portfolio/', // par exemple 'https://ton-pseudo.github.io/Portfolio/'
     couleur: '#00EEFF',
     pages: {
       accueil: 'Accueil', 'a-propos': 'À propos', projets: 'Projets', cv: 'CV', contact: 'Contact',
