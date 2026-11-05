@@ -31,7 +31,7 @@ export const SITES = {
     nom: 'Jeux',
     parties: true,
     // jeux en plusieurs manches (ou mains) : la fiche d'une partie montre combien en ont été jouées
-    manches: ['president', 'cranes', 'kassen', 'petitbac', 'puissance4', 'skyjo'],
+    manches: ['president', 'cranes', 'kassen', 'petitbac', 'puissance4', 'skyjo', 'demineur'],
     mains: ['poker', 'blackjack'],
     base: 'https://games-12f19-default-rtdb.europe-west1.firebasedatabase.app',
     adresse: 'https://kciol.github.io/Games/', // par exemple 'https://ton-pseudo.github.io/jeux-vol/'
