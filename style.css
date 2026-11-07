@@ -403,6 +403,10 @@ html::-webkit-scrollbar-corner, .fiche::-webkit-scrollbar-corner { background: t
 .partie-infos { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px 14px; }
 .partie-infos dt { font-size: .7rem; color: var(--texte-3); }
 .partie-infos dd { font-size: .84rem; color: var(--texte); margin: 2px 0 0; }
+.titre-manches { font-size: .78rem; font-weight: 600; color: var(--texte-2); margin: 14px 0 6px; }
+.manches-joueurs { list-style: none; display: grid; gap: 4px; max-height: 160px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; }
+.manches-joueurs li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: 10px; background: rgba(255, 255, 255, .05); font-size: .8rem; color: var(--texte); }
+.manches-joueurs .manches-plage { color: var(--texte-2); }
 .journal .heure { color: var(--texte); font-weight: 600; font-variant-numeric: tabular-nums; }
 .classement .sous .heures { color: var(--texte-2); white-space: normal; overflow-wrap: anywhere; }
 

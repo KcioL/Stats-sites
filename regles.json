@@ -60,6 +60,10 @@
                   ".write": "data.parent().exists() && $id.matches(/^[a-z0-9-]{6,40}$/)",
                   ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 999 && (!data.exists() || newData.val() > data.val())"
                 },
+                "j": {
+                  ".write": "data.parent().exists() && $id.matches(/^[a-z0-9-]{6,40}$/)",
+                  ".validate": "newData.isString() && newData.val().length <= 3000 && newData.val().matches(/^[0-9]{1,2}([+][0-9]{1,2})?(,[0-9]{1,2}([+][0-9]{1,2})?)*$/) && (!data.exists() || newData.val().beginsWith(data.val() + ','))"
+                },
                 "$autre": {
                   ".validate": false
                 }

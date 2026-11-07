@@ -28,6 +28,8 @@
  * les actions dont le nom commence par « parties » comme des parties jouées, avec le détail par mode.
  * Pour une partie en plusieurs manches : const ref = window.suivi.action('parties-telephone', 'skyjo', { m: 1 })
  * note m (nombre de manches) dans le journal, puis window.suivi.manches(ref, 3) le met à jour.
+ * Joueurs : { j: '3+1' } (3 joueurs et 1 bot) à l'action, puis window.suivi.manches(ref, 2, '2+1') ajoute
+ * ceux de la manche suivante : j devient « 3+1,2+1 » (un nombre par manche, « +bots » s'il y en a).
  *
  * Pas compté : localhost, hors connexion, et un appareil où l'on a ouvert le site avec ?suivi=off
  * (?suivi=on pour annuler).
@@ -135,16 +137,30 @@
     const entree = { a, p, t: { '.sv': 'timestamp' } };
     const m = details && Number(details.m);
     if (Number.isInteger(m) && m >= 1 && m <= 999) entree.m = m;
-    envoyer({ [`${s}/jours/${jour}/journal/${id}`]: entree });
-    return { jour, id, m: entree.m || 0 }; // pour window.suivi.manches(ref, n)
+    const ref = { jour, id, m: entree.m || 0, j: '' }; // pour window.suivi.manches(ref, n, joueurs)
+    const j = details && joueursValides(details.j);
+    // les joueurs sont envoyés une fois la partie notée (leur règle demande que la partie existe)
+    envoyer({ [`${s}/jours/${jour}/journal/${id}`]: entree }).then(() => { if (j) ajouterJoueurs(ref, j); });
+    return ref;
+  }
+
+  const joueursValides = (j) => (typeof j === 'string' && /^[0-9]{1,2}(\+[0-9]{1,2})?$/.test(j) ? j : '');
+  function ajouterJoueurs(ref, j) {
+    const tout = ref.j ? `${ref.j},${j}` : j;
+    if (tout.length > 3000) return;
+    ref.j = tout;
+    envoyer({ [`stats/${site}/jours/${ref.jour}/journal/${ref.id}/j`]: tout });
   }
 
   // Nombre de manches jouées d'une partie déjà notée au journal (seulement s'il augmente)
-  function manches(ref, n) {
+  // (et, en option, les joueurs de cette manche : '3' ou '3+1' avec un bot)
+  function manches(ref, n, joueurs) {
     n = Number(n);
     if (!ref || !ref.id || !Number.isInteger(n) || n < 1 || n > 999 || n <= ref.m || horsJeu()) return;
     ref.m = n;
     envoyer({ [`stats/${site}/jours/${ref.jour}/journal/${ref.id}/m`]: n });
+    const j = joueursValides(joueurs);
+    if (j) ajouterJoueurs(ref, j);
   }
 
   // Première page : comptée un peu après l'ouverture, pour ne pas ralentir le site

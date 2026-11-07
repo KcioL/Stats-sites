@@ -602,9 +602,15 @@ function rendreFiche(animerFiche = false) {
       // moyenne des manches, sur les parties où elles sont notées
       const unitM = toutesParties ? uniteManches(selection, page) : null;
       const avecM = unitM ? entrees.filter((e) => e.m) : [];
+      const nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
       if (avecM.length) {
         const moy = avecM.reduce((s, e) => s + e.m, 0) / avecM.length;
-        $('fiche-heures-note').textContent += ` · ${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(moy)} ${unitM[1]} par partie en moyenne`;
+        $('fiche-heures-note').textContent += ` · ${nf1.format(moy)} ${unitM[1]} par partie en moyenne`;
+      }
+      const avecJ = toutesParties ? entrees.filter((e) => e.j) : [];
+      if (avecJ.length) {
+        const moy = avecJ.reduce((s, e) => { const c = lireJoueurs(e.j)[0]; return s + c.h + c.b; }, 0) / avecJ.length;
+        $('fiche-heures-note').textContent += ` · ${nf1.format(moy)} joueurs par partie`;
       }
       entreesFiche = entrees;
       $('fiche-journal-titre').textContent = toutesParties ? 'Une par une · touche une partie' : 'Une par une';
@@ -634,7 +640,7 @@ const heureDe = (t) => heureParis(new Date(t));
 function journal(objJours, cles, filtre = () => true) {
   const res = [];
   for (const c of cles) for (const [id, e] of Object.entries((objJours[c] && objJours[c].journal) || {})) {
-    if (e && typeof e.t === 'number' && filtre(e)) res.push({ id, jour: c, a: e.a, p: e.p, t: e.t, m: typeof e.m === 'number' ? e.m : 0 });
+    if (e && typeof e.t === 'number' && filtre(e)) res.push({ id, jour: c, a: e.a, p: e.p, t: e.t, m: typeof e.m === 'number' ? e.m : 0, j: typeof e.j === 'string' ? e.j : '' });
   }
   return res.sort((x, y) => y.t - x.t);
 }
@@ -672,6 +678,25 @@ function uniteManches(site, page) {
   if ((cfg.manches || []).includes(page)) return ['manche', 'manches'];
   return null;
 }
+// Joueurs notés pour une partie : '4+1,3+1' → [{ h: 4, b: 1 }, { h: 3, b: 1 }] (une entrée par manche)
+function lireJoueurs(j) {
+  return String(j || '').split(',').filter(Boolean).map((x) => { const [h, b] = x.split('+').map(Number); return { h: h || 0, b: b || 0 }; });
+}
+const texteJoueurs = (c) => {
+  const n = c.h + c.b;
+  return `${nf.format(n)} joueur${n > 1 ? 's' : ''}${c.b ? ` (dont ${nf.format(c.b)} bot${c.b > 1 ? 's' : ''})` : ''}`;
+};
+// Joueurs manche par manche, les manches à la suite avec les mêmes joueurs regroupées : « Manches 1 à 12 : 4 joueurs »
+function joueursParManche(liste, unite) {
+  const groupes = [];
+  liste.forEach((c, i) => {
+    const g = groupes[groupes.length - 1];
+    if (g && g.c.h === c.h && g.c.b === c.b) g.fin = i + 1;
+    else groupes.push({ debut: i + 1, fin: i + 1, c });
+  });
+  const nom = (pl) => (pl ? unite[1] : unite[0]).replace(/^./, (x) => x.toUpperCase());
+  return groupes.map((g) => `<li><span class="manches-plage">${g.debut === g.fin ? `${nom(false)} ${g.debut}` : `${nom(true)} ${g.debut} à ${g.fin}`}</span><span>${texteJoueurs(g.c)}</span></li>`).join('');
+}
 function rendrePartie() {
   const zone = $('fiche-partie');
   const e = entreesFiche.find((x) => x.id === partieChoisie);
@@ -686,6 +711,12 @@ function rendrePartie() {
     ['Heure', fmtSeconde.format(new Date(e.t))],
   ];
   if (partie && MODES[e.a]) lignes.push(['Mode', nomMode(e.a)]);
+  const joueurs = lireJoueurs(e.j);
+  if (joueurs.length) {
+    lignes.push([joueurs.length > 1 ? 'Joueurs au départ' : 'Joueurs', texteJoueurs(joueurs[0])]);
+    const der = joueurs[joueurs.length - 1];
+    if (joueurs.length > 1 && (der.h !== joueurs[0].h || der.b !== joueurs[0].b)) lignes.push([`Joueurs à la dernière ${unite ? unite[0] : 'manche'}`, texteJoueurs(der)]);
+  } else if (partie) lignes.push(['Joueurs', 'pas noté (partie d’avant la mise à jour)']);
   if (partie) lignes.push(['Partie du jour', `${nf.format(rang)}${rang === 1 ? 're' : 'e'} sur ${nf.format(duJour.length)}`]);
   let grand = '';
   if (unite) {
@@ -698,7 +729,8 @@ function rendrePartie() {
   zone.innerHTML = `<div class="partie-entete"><h4>${partie ? 'Partie' : echapper(joli(nomAction(e.a, 1)))} de ${fmtHeure.format(new Date(e.t))}</h4>`
     + `<button type="button" class="rond verre petit-rond" id="partie-fermer" aria-label="Fermer le détail">×</button></div>`
     + grand
-    + `<dl class="partie-infos">${lignes.map(([k, v]) => `<div><dt>${k}</dt><dd>${echapper(v)}</dd></div>`).join('')}</dl>`;
+    + `<dl class="partie-infos">${lignes.map(([k, v]) => `<div><dt>${k}</dt><dd>${echapper(v)}</dd></div>`).join('')}</dl>`
+    + (joueurs.length > 1 && unite ? `<h5 class="titre-manches">Joueurs ${unite[0] === 'main' ? 'main' : 'manche'} par ${unite[0]}</h5><ul class="manches-joueurs">${joueursParManche(joueurs, unite)}</ul>` : '');
   zone.hidden = false;
 }
 $('fiche-journal').addEventListener('click', (ev) => {
@@ -1124,7 +1156,14 @@ function remplirDemo() {
         for (let k = 0; k < nb; k++) {
           const h = Math.min(23, Math.floor(alea() < 0.6 ? 17 + alea() * 7 : 8 + alea() * 9));
           journalDemo[`demo-${c}-${a}-${pg}-${k}`] = { a, p: pg, t: Date.UTC(ay, am - 1, ad, h - 1, Math.floor(alea() * 60)) };
-          if (uniteManches(id, pg)) journalDemo[`demo-${c}-${a}-${pg}-${k}`].m = 1 + Math.floor(alea() * 8);
+          const ed = journalDemo[`demo-${c}-${a}-${pg}-${k}`];
+          if (mod.parties) {
+            let h = 2 + Math.floor(alea() * 4), b = pg === 'poker' ? Math.floor(alea() * 3) : 0;
+            if (uniteManches(id, pg)) {
+              ed.m = 1 + Math.floor(alea() * 8);
+              ed.j = Array.from({ length: ed.m }, (_, i) => { if (i && alea() < 0.2 && h + b > 2) { if (b && alea() < 0.5) b--; else h--; } return b ? `${h}+${b}` : `${h}`; }).join(',');
+            } else ed.j = String(h);
+          }
         }
       }
       j[c] = { journal: journalDemo, visiteurs, vues: Math.round(visiteurs * (2.6 + alea() * 1.4)), nouveaux: Math.round(visiteurs * (0.3 + alea() * 0.2)),
