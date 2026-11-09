@@ -99,7 +99,7 @@ export const SITES = {
       avenir: 'À venir', decouvrir: 'Découvrir', succes: 'Succès', profils: 'Profils', liste: 'Ma liste',
       fiche: 'Fiche d’une série', profil: 'Profil d’un membre',
     },
-    actions: { 'ajout-liste': ['série ajoutée', 'séries ajoutées'] },
+    actions: { 'ajout-liste': ['série ajoutée', 'séries ajoutées'], 'import-liste': ['liste importée', 'listes importées'] },
   },
   portfolio: {
     logo: 'logos/portfolio.png',
