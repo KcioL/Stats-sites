@@ -94,6 +94,10 @@ function preparerVue() {
   }
 }
 
+// Chiffre avec son unité, et une précision en dessous : « 26 visiteurs » / « 30 octobre 2026 »
+const avecUnite = (n, un, plusieurs, detail = '') =>
+  `${nf.format(n)}<span class="unite"> ${n > 1 ? plusieurs : un}</span>${detail ? `<small>${detail}</small>` : ''}`;
+
 // Additionne les compteurs de src dans cible (objets imbriqués), sauf les clés ignorées
 function additionner(cible, src, ignorer = []) {
   for (const [k, x] of Object.entries(src || {})) {
@@ -268,16 +272,16 @@ function rendre() {
   $('note-appli').textContent = visites ? `${nf.format(appli)} sur ${nf.format(visites)} ont ouvert le site depuis l'écran d'accueil` : 'Pas encore de visites sur cette période.';
 
   // Depuis le début
-  $('t-visiteurs').textContent = nf.format(total.visiteurs || 0);
-  $('t-vues').textContent = nf.format(total.vues || 0);
+  $('t-visiteurs').innerHTML = avecUnite(total.visiteurs || 0, 'visiteur', 'visiteurs', 'différents, depuis le début');
+  $('t-vues').innerHTML = avecUnite(total.vues || 0, 'page vue', 'pages vues', 'au total');
   const nbTotalParties = tous ? 0 : totalParties();
   $('t-parties-ligne').hidden = !nbTotalParties && !avecParties(selection);
-  $('t-parties').textContent = nf.format(nbTotalParties);
+  $('t-parties').innerHTML = avecUnite(nbTotalParties, 'partie', 'parties', 'lancées au total');
   rendreFiche();
   rendreJour();
   const meilleur = Object.keys(jours).reduce((m, c) => (v(c, 'visiteurs') > v(m, 'visiteurs') ? c : m), aujourdhui);
   $('t-record').innerHTML = v(meilleur, 'visiteurs')
-    ? `${nf.format(v(meilleur, 'visiteurs'))}<small>${fmt(meilleur, { day: 'numeric', month: 'long', year: 'numeric' })}</small>` : '–';
+    ? avecUnite(v(meilleur, 'visiteurs'), 'visiteur', 'visiteurs', fmt(meilleur, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : '–';
 
   rendreExtras(cles, libPeriode);
   montrerOnglet(onglet, false);
@@ -1247,12 +1251,12 @@ function rendreExtras(cles, libPeriode) {
     semaines[lundi] = (semaines[lundi] || 0) + v(c, 'visiteurs');
   }
   const mSem = Object.entries(semaines).sort((a, b) => b[1] - a[1])[0];
-  $('t-semaine').innerHTML = mSem && mSem[1] ? `${nf.format(mSem[1])}<small>semaine du ${fmt(mSem[0], { day: 'numeric', month: 'long' })}</small>` : '–';
+  $('t-semaine').innerHTML = mSem && mSem[1] ? avecUnite(mSem[1], 'visiteur', 'visiteurs', `semaine du ${fmt(mSem[0], { day: 'numeric', month: 'long' })} · additionnés jour par jour`) : '–';
   const mMois = Object.entries(mois).map(([k, x]) => [k, (x && x.visiteurs) || 0]).sort((a, b) => b[1] - a[1])[0];
-  $('t-mois').innerHTML = mMois && mMois[1] ? `${nf.format(mMois[1])}<small>${fmt(mMois[0], { month: 'long', year: 'numeric' })}</small>` : '–';
+  $('t-mois').innerHTML = mMois && mMois[1] ? avecUnite(mMois[1], 'visiteur', 'visiteurs', `${fmt(mMois[0], { month: 'long', year: 'numeric' })} · chacun compté une fois dans le mois`) : '–';
   let serie = 0;
   for (let c = v(jourDe(), 'visiteurs') ? jourDe() : decaler(jourDe(), -1); v(c, 'visiteurs') > 0 && serie < 999; c = decaler(c, -1)) serie++;
-  $('t-serie').innerHTML = serie ? `${nf.format(serie)}<small>jour${serie > 1 ? 's' : ''}${v(jourDe(), 'visiteurs') ? ', aujourd’hui compris' : ''}</small>` : '–';
+  $('t-serie').innerHTML = serie ? avecUnite(serie, 'jour', 'jours', `d’affilée avec au moins une visite${v(jourDe(), 'visiteurs') ? ', aujourd’hui compris' : ''}`) : '–';
 
   rendreDirect();
   rendreEtatSuivi();
