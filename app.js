@@ -1120,7 +1120,7 @@ function rendreExtras(cles, libPeriode) {
 
   // --- D'où ils viennent ---
   const nbSources = repartition('repartition-sources', 'legende-sources', sommeObjet(cles, 'sources'), { noms: nomSource });
-  $('note-sources').textContent = nbSources ? `${nf.format(nbSources)} visites sur ${libPeriode}` : `Visites sur ${libPeriode}`;
+  $('note-sources').textContent = nbSources ? `${nf.format(nbSources)} visite${nbSources > 1 ? 's' : ''} sur ${libPeriode}` : `Visites sur ${libPeriode}`;
 
   // --- Quand ils viennent : jour de la semaine × heure ---
   const grille = Array.from({ length: 7 }, () => Array(24).fill(0));
@@ -1501,6 +1501,9 @@ const DEMO_CONTENUS = {
     recherche: { 'one-piece': 'one piece', 'frieren': 'frieren', 'kagurabachi': 'kagurabachi', 'naruto': 'naruto' } },
   animezone: { anime: { '21': 'One Piece', '52991': 'Frieren', '40748': 'Jujutsu Kaisen', '57334': 'Dandadan', '16498': 'L’Attaque des Titans', '38000': 'Demon Slayer', '51009': 'Solo Leveling' },
     recherche: { 'solo-leveling': 'solo leveling', 'frieren': 'frieren', 'chainsaw': 'chainsaw', 'spy-x-family': 'spy x family' } },
+  seriezone: { serie: { '1399': 'Game of Thrones', '1396': 'Breaking Bad', '66732': 'Stranger Things', '100088': 'The Last of Us', '94997': 'House of the Dragon', '136315': 'The Bear' },
+    ajout: { '136315': 'The Bear', '100088': 'The Last of Us', '66732': 'Stranger Things' },
+    recherche: { 'severance': 'severance', 'the-bear': 'the bear', 'shogun': 'shogun' } },
   portfolio: { projet: { 'projet-r': 'Clustering R', 'projet-vba': 'Reporting RH VBA', 'projet-twitch': 'Analyse Data Twitch', 'projet-cook': 'App Cook & Save' } },
 };
 const DEMO_SOURCES = {
@@ -1508,6 +1511,7 @@ const DEMO_SOURCES = {
   pyrolos: { direct: 30, google: 25, instagram: 18, facebook: 10, whatsapp: 9, appli: 4 },
   mangazone: { direct: 30, appli: 25, google: 22, reddit: 8, instagram: 8, discord: 4 },
   animezone: { direct: 28, appli: 24, google: 26, tiktok: 10, x: 6, discord: 4 },
+  seriezone: { direct: 30, appli: 22, google: 24, instagram: 12, tiktok: 8, whatsapp: 4 },
   portfolio: { linkedin: 38, direct: 24, google: 18, github: 12, 'e-mail': 6, 'lien-jeux-vol': 2 },
 };
 function completerDemo(id, j, c, visiteurs, mobile, alea, pages, mod) {
@@ -1581,6 +1585,8 @@ function remplirDemo() {
     portfolio: { base: 3, pente: 0.01, weekend: 0.5, appli: 0, mobile: 0.4, telechargements: { cv: 0.5, 'projet-r': 0.3, 'projet-vba': 0.3, 'projet-twitch': 0.25 },
       pages: { accueil: 10, 'a-propos': 7, projets: 6, cv: 4, contact: 2, 'projet-r': 2, 'projet-vba': 1.5, 'projet-twitch': 1.5, 'projet-web': 1 } },
     animezone: { base: 5, pente: 0.04, weekend: 1.4, appli: 0.3, mobile: 0.78,
+      pages: { avenir: 8, decouvrir: 6, liste: 5, fiche: 5, profils: 2, succes: 2, profil: 1 } },
+    seriezone: { base: 3, pente: 0.05, weekend: 1.5, appli: 0.3, mobile: 0.75,
       pages: { avenir: 8, decouvrir: 6, liste: 5, fiche: 5, profils: 2, succes: 2, profil: 1 } },
   };
   const tous = derniersJours(400);
