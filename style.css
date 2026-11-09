@@ -341,6 +341,74 @@ svg { flex: none; }
 .totaux dd { font-size: 1.05rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
 .totaux dd small { display: block; font-size: .68rem; font-weight: 400; color: var(--texte-3); }
 
+/* ---------- Onglets : place des cartes selon l'onglet ---------- */
+.temps, .contenus { grid-column: span 6; display: flex; flex-direction: column; }
+.jeux { grid-column: 1 / -1; }
+.direct-carte { grid-column: span 4; display: flex; flex-direction: column; }
+.chaleur { grid-column: span 8; }
+.sources, .fidelite { grid-column: span 6; }
+body[data-onglet="apercu"] .sources { grid-column: span 4; }
+.appareils, .appli, .systemes, .navigateurs { grid-column: span 6; }
+.erreurs { grid-column: span 8; grid-row: span 2; display: flex; flex-direction: column; }
+.chargement { grid-column: span 4; }
+.erreurs-pages { grid-column: span 4; }
+body[data-onglet="pages"] .pages { grid-column: span 6; }
+body[data-onglet="pages"] .classement { max-height: 460px; }
+.pilule { position: relative; }
+.pastille-alerte { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--rouge); color: #fff; font-size: .66rem; font-weight: 600; display: grid; place-items: center; box-shadow: 0 0 0 2px rgba(20, 20, 22, .6); }
+.pastille-alerte[hidden] { display: none; }
+.vide-doux { list-style: none; color: var(--texte-3); font-size: .85rem; padding: 10px 2px; background: none !important; border: 0 !important; }
+.sous-titre-carte { font-size: .82rem; font-weight: 600; color: var(--texte-2); margin: 16px 0 8px; }
+.grand-chiffre { font-size: 2.6rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; margin: 4px 0 12px; }
+.mini-chiffres { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+
+/* Listes avec barres (temps passé, contenus, pages touchées) */
+.barres-liste { list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 380px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; padding-right: 2px; }
+.barres-liste li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 9px 12px; border-radius: 14px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .07); }
+.barres-liste .lib { font-size: .86rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barres-liste .lib small { display: block; font-size: .7rem; color: var(--texte-3); }
+.barres-liste .val { font-weight: 600; font-variant-numeric: tabular-nums; font-size: .9rem; }
+.barres-liste .jauge { grid-column: 1 / -1; height: 3px; border-radius: 999px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+.barres-liste .jauge i { display: block; height: 100%; width: var(--l); border-radius: inherit; background: var(--accent); }
+.anime .barres-liste .jauge i { animation: etire .9s cubic-bezier(.2, .8, .2, 1) both; transform-origin: left; }
+
+/* En direct */
+.voyant-direct { width: 10px; height: 10px; border-radius: 50%; background: var(--vert); position: relative; margin-top: 6px; flex: none; }
+.voyant-direct::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--vert); animation: pouls 2s infinite; }
+#nb-direct:not(.actif) { color: var(--texte-3); }
+.liste-direct { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.liste-direct li { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, .06); font-size: .84rem; }
+.liste-direct li i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.liste-direct li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--texte-2); }
+
+/* Carte de chaleur */
+.grille-chaleur { display: grid; grid-template-columns: 34px repeat(24, minmax(0, 1fr)); gap: 3px; align-items: center; }
+.grille-chaleur span { font-size: .64rem; color: var(--texte-3); white-space: nowrap; }
+.grille-chaleur .h { text-align: left; overflow: visible; }
+.grille-chaleur i { aspect-ratio: 1; border-radius: 4px; background: rgba(79, 141, 255, calc(.08 + var(--a) * .92)); border: 1px solid rgba(255, 255, 255, .04); }
+
+/* Erreurs */
+.liste-bugs { list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; }
+.liste-bugs li { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 10px 46px 10px 14px; border-radius: 14px; background: rgba(240, 105, 124, .08); border: 1px solid rgba(240, 105, 124, .18); }
+.liste-bugs .bug-message { font-size: .85rem; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+.liste-bugs .bug-infos { font-size: .72rem; color: var(--texte-3); }
+.liste-bugs code { font-size: .7rem; color: var(--texte-2); }
+.liste-bugs .bug-nb { position: absolute; right: 12px; top: 10px; font-weight: 600; font-size: .8rem; color: var(--rouge); }
+.spark-large { position: static; width: 100%; height: 46px; margin: 0 0 12px; }
+
+/* Parties en détail */
+.tableau-jeux { margin-top: 14px; overflow-x: auto; }
+.tableau-jeux table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.tableau-jeux th { text-align: left; font-weight: 500; color: var(--texte-3); font-size: .74rem; padding: 6px 10px; border-bottom: 1px solid rgba(255, 255, 255, .1); white-space: nowrap; }
+.tableau-jeux td { padding: 8px 10px; border-bottom: 1px solid rgba(255, 255, 255, .06); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tableau-jeux td:first-child { font-weight: 500; }
+
+/* Notes sur le graphique */
+.repere { position: absolute; left: 50%; bottom: calc(var(--h) + 8px); width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--or); box-shadow: 0 0 0 3px rgba(242, 182, 50, .25); pointer-events: none; }
+.note-bulle { color: var(--or) !important; }
+.note-jour { margin: -4px 0 14px; padding: 8px 12px; border-radius: 12px; background: rgba(242, 182, 50, .12); color: color-mix(in srgb, var(--or) 70%, white); font-size: .85rem; }
+.note-jour[hidden] { display: none; }
+
 /* ---------- Pied ---------- */
 .pied { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; justify-content: space-between; }
 .moi { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: var(--texte-2); font-size: .8rem; }
@@ -425,6 +493,9 @@ html::-webkit-scrollbar-corner, .fiche::-webkit-scrollbar-corner { background: t
   .classement { max-height: 460px; }
   .appareils, .appli { grid-column: span 6; }
   .total { grid-column: 1 / -1; }
+  .temps, .contenus, .sources, .fidelite, .systemes, .navigateurs, body[data-onglet="pages"] .pages { grid-column: span 6; }
+  .direct-carte, .chargement, .erreurs-pages, body[data-onglet="apercu"] .sources { grid-column: span 6; }
+  .chaleur, .erreurs { grid-column: 1 / -1; grid-row: auto; }
   .pilule span { display: none; }
   .pilule { padding: 0; width: 40px; justify-content: center; }
 }
@@ -439,7 +510,17 @@ html::-webkit-scrollbar-corner, .fiche::-webkit-scrollbar-corner { background: t
     border-bottom-color: rgba(255, 255, 255, .09);
   }
   .haut::before { display: none; }
-  .pilules { justify-content: center; gap: 6px; }
+  /* les onglets passent sur une 2e ligne, qui défile, avec leur nom */
+  .pilules { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 2px -12px 0; padding: 4px 12px 2px; }
+  .pilules::-webkit-scrollbar { display: none; }
+  .pilule { width: auto; padding: 0 14px; height: 36px; flex: none; }
+  .pilule span { display: inline; font-size: .82rem; }
+  .temps, .contenus, .sources, .fidelite, .systemes, .navigateurs, .direct-carte, .chaleur, .erreurs, .chargement, .erreurs-pages,
+  body[data-onglet="apercu"] .sources, body[data-onglet="pages"] .pages, .appareils, .appli { grid-column: 1 / -1; }
+  .grand-chiffre { font-size: 2.1rem; }
+  .grille-chaleur { grid-template-columns: 28px repeat(24, minmax(0, 1fr)); gap: 2px; }
+  .grille-chaleur i { border-radius: 2px; }
+  .grille-chaleur span { font-size: .56rem; }
   .direct span { display: none; }
   .direct { padding: 0; width: 40px; justify-content: center; }
   .dock {

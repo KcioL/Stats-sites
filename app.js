@@ -77,9 +77,14 @@ function preparerVue() {
   for (const [id, d] of Object.entries(donnees)) {
     for (const [cle, j] of Object.entries(d.jours || {})) {
       const t = jours[cle] || (jours[cle] = { visiteurs: 0, vues: 0, nouveaux: 0, appli: 0, appareils: {}, pages: {} });
-      for (const champ of ['visiteurs', 'vues', 'nouveaux', 'appli']) t[champ] += j[champ] || 0;
-      for (const [a, nb] of Object.entries(j.appareils || {})) t.appareils[a] = (t.appareils[a] || 0) + nb;
+      // tous les compteurs s'additionnent (sauf les pages, remplacées par les sites, et les listes)
+      additionner(t, j, ['pages', 'journal', 'bugs', 'contenus', 'temps', 'actions', 'erreurs']);
       if (j.visiteurs) t.pages[id] = j.visiteurs;
+      // temps passé et erreurs : par site
+      const tp = Object.values(j.temps || {}).reduce((a, x) => ({ s: a.s + ((x && x.s) || 0), n: a.n + ((x && x.n) || 0) }), { s: 0, n: 0 });
+      if (tp.n) (t.temps || (t.temps = {}))[id] = tp;
+      const er = Object.values(j.erreurs || {}).reduce((a, x) => a + (Number(x) || 0), 0);
+      if (er) (t.erreurs || (t.erreurs = {}))[id] = er;
     }
     for (const [cle, m] of Object.entries(d.mois || {})) {
       (mois[cle] || (mois[cle] = { visiteurs: 0 })).visiteurs += m.visiteurs || 0;
@@ -87,6 +92,16 @@ function preparerVue() {
     total.visiteurs += (d.total && d.total.visiteurs) || 0;
     total.vues += (d.total && d.total.vues) || 0;
   }
+}
+
+// Additionne les compteurs de src dans cible (objets imbriqués), sauf les clés ignorées
+function additionner(cible, src, ignorer = []) {
+  for (const [k, x] of Object.entries(src || {})) {
+    if (ignorer.includes(k)) continue;
+    if (typeof x === 'number') cible[k] = (cible[k] || 0) + x;
+    else if (x && typeof x === 'object') additionner(cible[k] && typeof cible[k] === 'object' ? cible[k] : (cible[k] = {}), x);
+  }
+  return cible;
 }
 
 const v = (cle, champ) => (jours[cle] && jours[cle][champ]) || 0;
@@ -148,7 +163,7 @@ function rendre() {
       cle: m, valeur: valMois(m), actuelle: i === 11,
       etiquette: fmt(m, { month: 'short' }).replace('.', ''),
       titre: fmt(m, { month: 'long', year: 'numeric' }),
-      detail: `${nf.format(sommeMois(m, 'vues'))} pages vues`, clic: true,
+      detail: `${nf.format(sommeMois(m, 'vues'))} pages vues`, clic: true, note: notesDe(m).join(' · '),
     })), 'mois');
   } else {
     graphe(cles.map((c, i) => ({
@@ -156,7 +171,7 @@ function rendre() {
       etiquette: c === aujourdhui ? 'Auj.' : periode === '7' ? fmt(c, { weekday: 'short' }).replace('.', '')
         : ((n - 1 - i) % 5 === 0 ? fmt(c, { day: 'numeric' }) : ''),
       titre: c === aujourdhui ? "Aujourd'hui" : fmt(c, { weekday: 'long', day: 'numeric', month: 'long' }),
-      detail: `${nf.format(v(c, 'vues'))} pages vues`, clic: true,
+      detail: `${nf.format(v(c, 'vues'))} pages vues`, clic: true, note: notesDe(c).join(' · '),
     })), 'jour');
   }
 
@@ -261,6 +276,9 @@ function rendre() {
   const meilleur = Object.keys(jours).reduce((m, c) => (v(c, 'visiteurs') > v(m, 'visiteurs') ? c : m), aujourdhui);
   $('t-record').innerHTML = v(meilleur, 'visiteurs')
     ? `${nf.format(v(meilleur, 'visiteurs'))}<small>${fmt(meilleur, { day: 'numeric', month: 'long', year: 'numeric' })}</small>` : '–';
+
+  rendreExtras(cles, libPeriode);
+  montrerOnglet(onglet, false);
 
   // Liens pour ne pas se compter soi-même
   const avecAdresse = toutesLesIds().filter((id) => SITES[id] && SITES[id].adresse);
@@ -401,7 +419,7 @@ function dessinerBarres(zone, points) {
   barres.style.setProperty('--ecart-barres', serre ? (innerWidth < 640 ? '2px' : '5px') : (innerWidth < 640 ? '8px' : '14px'));
   barres.innerHTML = points.map((p, i) => `
     <div class="colonne${p.actuelle ? ' actuelle' : ''}" data-i="${i}" style="--h:${(p.valeur / max) * zoneHaut}px; --retard:${i * (serre ? 18 : 60)}ms">
-      <div class="zone"><div class="barre-v"></div>${p.actuelle && !serre ? `<span class="etiquette-valeur">${nf.format(p.valeur)}</span>` : ''}</div>
+      <div class="zone"><div class="barre-v"></div>${p.actuelle && !serre ? `<span class="etiquette-valeur">${nf.format(p.valeur)}</span>` : ''}${p.note ? '<span class="repere" aria-hidden="true"></span>' : ''}</div>
       <span class="etiquette">${p.etiquette}</span>
     </div>`).join('');
   barres._points = points;
@@ -424,7 +442,7 @@ function brancherBulle(zone) {
     const [un, plusieurs] = p.unite || ['visiteur', 'visiteurs'];
     zone.querySelectorAll('.colonne.active').forEach((c) => c.classList.remove('active'));
     col.classList.add('active');
-    bulle.innerHTML = `<span>${p.titre}</span><strong>${nf.format(p.valeur)} ${p.valeur > 1 ? plusieurs : un}</strong>${p.detail ? `<span>${p.detail}</span>` : ''}${p.clic ? '<em>Clique pour le détail</em>' : ''}`;
+    bulle.innerHTML = `<span>${p.titre}</span><strong>${nf.format(p.valeur)} ${p.valeur > 1 ? plusieurs : un}</strong>${p.detail ? `<span>${p.detail}</span>` : ''}${p.note ? `<span class="note-bulle">📌 ${echapper(p.note)}</span>` : ''}${p.clic ? '<em>Clique pour le détail</em>' : ''}`;
     bulle.hidden = false;
     const rz = zone.getBoundingClientRect();
     const rb = col.querySelector('.barre-v').getBoundingClientRect();
@@ -640,7 +658,7 @@ const heureDe = (t) => heureParis(new Date(t));
 function journal(objJours, cles, filtre = () => true) {
   const res = [];
   for (const c of cles) for (const [id, e] of Object.entries((objJours[c] && objJours[c].journal) || {})) {
-    if (e && typeof e.t === 'number' && filtre(e)) res.push({ id, jour: c, a: e.a, p: e.p, t: e.t, m: typeof e.m === 'number' ? e.m : 0, j: typeof e.j === 'string' ? e.j : '' });
+    if (e && typeof e.t === 'number' && filtre(e)) res.push({ id, jour: c, a: e.a, p: e.p, t: e.t, m: typeof e.m === 'number' ? e.m : 0, j: typeof e.j === 'string' ? e.j : '', d: typeof e.d === 'number' ? e.d : 0, x: e.x === true });
   }
   return res.sort((x, y) => y.t - x.t);
 }
@@ -717,6 +735,8 @@ function rendrePartie() {
     const der = joueurs[joueurs.length - 1];
     if (joueurs.length > 1 && (der.h !== joueurs[0].h || der.b !== joueurs[0].b)) lignes.push([`Joueurs à la dernière ${unite ? unite[0] : 'manche'}`, texteJoueurs(der)]);
   } else if (partie) lignes.push(['Joueurs', 'pas noté (partie d’avant la mise à jour)']);
+  if (partie && e.d) lignes.push(['Durée', dureeTexte(e.d)]);
+  if (partie && (e.d || e.x)) lignes.push(['Fin', e.x ? 'allée jusqu’au bout' : 'abandonnée en cours de route']);
   if (partie) lignes.push(['Partie du jour', `${nf.format(rang)}${rang === 1 ? 're' : 'e'} sur ${nf.format(duJour.length)}`]);
   let grand = '';
   if (unite) {
@@ -779,6 +799,9 @@ function rendreJour(forcer = false) {
   const tous = selection === 'tous';
 
   $('jour-site').textContent = `${tous ? 'Tous les sites' : nomSite(selection)} · ${enMois ? 'détail du mois' : 'détail du jour'}`;
+  const notesJour = notesDe(cle);
+  $('jour-note').hidden = !notesJour.length;
+  $('jour-note').textContent = notesJour.length ? `📌 ${notesJour.join(' · ')}` : '';
   $('jour-titre').textContent = enMois ? fmt(cle, { month: 'long', year: 'numeric' })
     : cle === aujourdhui ? `Aujourd'hui · ${fmt(cle, { day: 'numeric', month: 'long' })}` : fmt(cle, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   // flèches : pas après aujourd'hui / ce mois-ci
@@ -997,17 +1020,344 @@ const majBarreHaut = () => barreHaut.classList.toggle('defile', scrollY > 8);
 addEventListener('scroll', majBarreHaut, { passive: true });
 majBarreHaut();
 
-// Pilules du haut : la section visible est mise en avant
-const pilules = [...document.querySelectorAll('.pilule[data-section]')];
-const activerPilule = (nom) => pilules.forEach((p) => p.classList.toggle('actif', p.dataset.section === nom));
-pilules.forEach((p) => p.addEventListener('click', () => activerPilule(p.dataset.section)));
-if (typeof IntersectionObserver === 'function') {
-  const io = new IntersectionObserver((entrees) => {
-    const visible = entrees.filter((e) => e.isIntersecting).sort((x, y) => y.intersectionRatio - x.intersectionRatio)[0];
-    if (visible) activerPilule(visible.target.id.replace('section-', ''));
-  }, { threshold: [0.4, 0.7], rootMargin: '-80px 0px -30% 0px' });
-  ['section-apercu', 'section-pages', 'section-appareils'].forEach((id) => io.observe($(id)));
+// ======================================================================
+// Nouveaux onglets : audience, contenus, appareils en détail, santé
+// ======================================================================
+const PALETTE = ['#4F8DFF', '#F2B632', '#F0697C', '#9B7BEA', '#3FBF7F', '#2EC4C4', '#E58A3A', '#C46FD8', '#8FA3B8'];
+const NOMS_SOURCES = {
+  direct: 'Accès direct', appli: "Appli (écran d'accueil)", google: 'Google', bing: 'Bing', duckduckgo: 'DuckDuckGo',
+  qwant: 'Qwant', ecosia: 'Ecosia', yahoo: 'Yahoo', brave: 'Brave', instagram: 'Instagram', messenger: 'Messenger',
+  facebook: 'Facebook', whatsapp: 'WhatsApp', x: 'X (Twitter)', linkedin: 'LinkedIn', github: 'GitHub', youtube: 'YouTube',
+  tiktok: 'TikTok', reddit: 'Reddit', discord: 'Discord', snapchat: 'Snapchat', pinterest: 'Pinterest', telegram: 'Telegram',
+  chatgpt: 'ChatGPT', claude: 'Claude', perplexity: 'Perplexity', 'e-mail': 'E-mail',
+};
+const NOMS_SYSTEMES = { ios: 'iPhone / iPad', android: 'Android', windows: 'Windows', macos: 'Mac', linux: 'Linux', chromeos: 'ChromeOS', autre: 'Autre' };
+const NOMS_NAVIGATEURS = {
+  chrome: 'Chrome', safari: 'Safari', firefox: 'Firefox', edge: 'Edge', samsung: 'Samsung Internet', opera: 'Opera',
+  instagram: "Dans l'appli Instagram", facebook: "Dans l'appli Facebook", autre: 'Autre',
+};
+const NOMS_RETOURS = [['veille', 'Le lendemain'], ['semaine', 'Dans la semaine'], ['mois', 'Dans le mois'], ['plus', 'Plus d’un mois après']];
+const NOMS_TYPES = {
+  serie: ['série', 'Séries'], manga: ['manga', 'Mangas'], anime: ['anime', 'Animes'], recherche: ['recherche', 'Recherches'],
+  projet: ['projet', 'Projets'], itineraire: ['itinéraire', 'Itinéraires'], col: ['col', 'Cols'], ajout: ['ajout', 'Ajoutés'],
+};
+const JOURS_SEMAINE = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+
+// Le nom d'une source : « lien-portfolio » → « Lien depuis Portfolio », « exemple-com » → « exemple.com »
+function nomSource(s) {
+  if (NOMS_SOURCES[s]) return NOMS_SOURCES[s];
+  if (s.startsWith('lien-')) {
+    const depot = s.slice(5);
+    const id = Object.keys(SITES).find((k) => {
+      const a = SITES[k].adresse || '';
+      try { return new URL(a).pathname.split('/').filter(Boolean)[0]?.toLowerCase() === depot; } catch (e) { return k === depot; }
+    }) || (SITES[depot] ? depot : null);
+    return `Lien depuis ${id ? nomSite(id) : joli(depot)}`;
+  }
+  return /-[a-z]{2,6}$/.test(s) ? s.replace(/-([a-z]{2,6})$/, '.$1') : joli(s);
 }
+const dureeTexte = (sec) => {
+  sec = Math.round(sec);
+  if (sec < 60) return `${sec} s`;
+  const m = Math.floor(sec / 60), s = sec % 60;
+  if (m < 60) return s && m < 10 ? `${m} min ${String(s).padStart(2, '0')}` : `${m} min`;
+  return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`;
+};
+// Somme sur des jours d'un compteur imbriqué : sommeObjet(cles, 'sources') → { instagram: 12, … }
+function sommeObjet(cles, champ, sousChamp = null) {
+  const res = {};
+  for (const c of cles) {
+    let o = jours[c] && jours[c][champ];
+    if (sousChamp && o) o = o[sousChamp];
+    for (const [k, n] of Object.entries(o || {})) {
+      if (typeof n === 'number') res[k] = (res[k] || 0) + n;
+      else if (n && typeof n === 'object') additionner(res[k] || (res[k] = {}), n);
+    }
+  }
+  return res;
+}
+// Barre de répartition + légende (comme la carte Appareils)
+function repartition(idBarre, idLegende, entrees, { max = 7, noms = {}, unite = '' } = {}) {
+  const tri = Object.entries(entrees).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  const tot = tri.reduce((s, [, n]) => s + n, 0);
+  let lignes = tri.slice(0, max);
+  if (tri.length > max) lignes = [...lignes.slice(0, max - 1), ['__autres', tri.slice(max - 1).reduce((s, [, n]) => s + n, 0)]];
+  const nom = (k) => (k === '__autres' ? 'Autres' : typeof noms === 'function' ? noms(k) : (noms[k] || joli(k)));
+  $(idBarre).innerHTML = tot ? lignes.map(([, n], i) => `<i style="width:${(n / tot) * 100}%;background:${PALETTE[i % PALETTE.length]}"></i>`).join('') : '';
+  $(idLegende).innerHTML = tot ? lignes.map(([k, n], i) => `<li><span class="puce" style="background:${PALETTE[i % PALETTE.length]}"></span><span class="lib">${echapper(nom(k))}</span><span class="pct">${Math.round((n / tot) * 100)} %</span><span class="nb">${nf.format(n)}${unite}</span></li>`).join('')
+    : '<li class="vide-doux">Pas encore de chiffres sur cette période.</li>';
+  return tot;
+}
+// Liste avec barres : [{ nom, valeur, texte, sous, couleur }]
+function barresListe(id, lignes, vide = 'Pas encore de chiffres sur cette période.') {
+  const max = Math.max(1, ...lignes.map((l) => l.valeur));
+  $(id).innerHTML = lignes.length ? lignes.map((l, i) => `<li style="--accent:${l.couleur || PALETTE[i % PALETTE.length]}">
+      <span class="lib">${echapper(l.nom)}${l.sous ? `<small>${l.sous}</small>` : ''}</span>
+      <span class="val">${l.texte}</span>
+      <span class="jauge"><i style="--l:${Math.max(2, (l.valeur / max) * 100)}%"></i></span></li>`).join('')
+    : `<li class="vide-doux">${vide}</li>`;
+}
+const carteVide = (classe, vide) => { const c = document.querySelector(`.grille > .${classe}`); if (c) c.dataset.vide = vide ? '1' : ''; };
+
+// ---------- Notes sur le graphique (config.js : NOTES) ----------
+const NOTES = Array.isArray(CONFIG.NOTES) ? CONFIG.NOTES.filter((n) => n && /^\d{4}-\d{2}-\d{2}$/.test(n.date) && n.texte) : [];
+if (DEMO && !NOTES.length) NOTES.push({ date: decaler(jourDe(), -5), texte: 'Yam’s en ligne', site: 'jeux' }, { date: decaler(jourDe(), -12), texte: 'Publication Instagram' });
+// Notes d'un jour (ou d'un mois 'AAAA-MM') pour la vue affichée
+function notesDe(cle) {
+  return NOTES.filter((n) => n.date.startsWith(cle) && (selection === 'tous' || !n.site || n.site === selection)).map((n) => n.texte);
+}
+
+function rendreExtras(cles, libPeriode) {
+  const tous = selection === 'tous';
+  const visiteurs = somme(cles, 'visiteurs');
+  const visites = somme(cles, 'visites');
+
+  // --- D'où ils viennent ---
+  const nbSources = repartition('repartition-sources', 'legende-sources', sommeObjet(cles, 'sources'), { noms: nomSource });
+  $('note-sources').textContent = nbSources ? `${nf.format(nbSources)} visites sur ${libPeriode}` : `Visites sur ${libPeriode}`;
+
+  // --- Quand ils viennent : jour de la semaine × heure ---
+  const grille = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (const c of cles) {
+    const js = (versDate(c).getUTCDay() + 6) % 7;
+    for (const [h, n] of Object.entries((jours[c] && jours[c].heures) || {})) if (grille[js][Number(h)] !== undefined) grille[js][Number(h)] += n;
+  }
+  const maxC = Math.max(0, ...grille.flat());
+  let pic = null;
+  grille.forEach((l, j) => l.forEach((n, h) => { if (n && n === maxC && !pic) pic = [j, h]; }));
+  $('grille-chaleur').innerHTML = `<span></span>${Array.from({ length: 24 }, (_, h) => `<span class="h">${h % 3 === 0 ? `${h}h` : ''}</span>`).join('')}`
+    + grille.map((l, j) => `<span class="j">${JOURS_SEMAINE[j]}</span>${l.map((n, h) => `<i style="--a:${maxC ? (n / maxC) : 0}" title="${JOURS_SEMAINE[j]} ${h}h–${h + 1}h : ${nf.format(n)} visite${n > 1 ? 's' : ''}"></i>`).join('')}`).join('');
+  $('note-chaleur').textContent = pic ? `Visites sur ${libPeriode} · le plus de monde : le ${['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'][pic[0]]} vers ${pic[1]}h` : `Pas encore de visites notées sur ${libPeriode}`;
+
+  // --- Fidélité ---
+  const revenus = somme(cles, 'revenus');
+  const nouveaux = somme(cles, 'nouveaux');
+  const chiffres = [
+    ['Visiteurs qui reviennent', visiteurs && revenus ? `${Math.round((revenus / visiteurs) * 100)} %` : '–', revenus ? `${nf.format(revenus)} sur ${nf.format(visiteurs)}` : ''],
+    ['Visites par visiteur', visiteurs && visites ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(visites / visiteurs) : '–', 'par jour'],
+    ['Nouveaux', visiteurs ? `${Math.round((nouveaux / visiteurs) * 100)} %` : '–', `${nf.format(nouveaux)} jamais venus`],
+  ];
+  $('chiffres-fidelite').innerHTML = chiffres.map(([l, v, s]) => `<div class="mini"><span>${l}</span><strong>${v}</strong><small>${s}</small></div>`).join('');
+  const retours = sommeObjet(cles, 'retours');
+  const totR = Object.values(retours).reduce((s, n) => s + n, 0);
+  $('legende-retours').innerHTML = totR ? NOMS_RETOURS.map(([k, l], i) => `<li><span class="puce" style="background:${PALETTE[i]}"></span><span class="lib">${l}</span><span class="pct">${Math.round(((retours[k] || 0) / totR) * 100)} %</span><span class="nb">${nf.format(retours[k] || 0)}</span></li>`).join('')
+    : '<li class="vide-doux">Pas encore de visiteurs revenus sur cette période.</li>';
+  $('note-fidelite').textContent = `Sur ${libPeriode}`;
+
+  // --- Systèmes et navigateurs ---
+  repartition('repartition-systemes', 'legende-systemes', sommeObjet(cles, 'systemes'), { noms: NOMS_SYSTEMES });
+  repartition('repartition-navigateurs', 'legende-navigateurs', sommeObjet(cles, 'navigateurs'), { noms: NOMS_NAVIGATEURS });
+
+  // --- Temps passé ---
+  const temps = sommeObjet(cles, 'temps');
+  const lignesT = Object.entries(temps).filter(([, x]) => x && x.n).map(([k, x]) => ({ k, moy: x.s / x.n, n: x.n }))
+    .sort((a, b) => b.n - a.n).slice(0, 40);
+  barresListe('liste-temps', lignesT.map((l) => ({ nom: nomPage(l.k), valeur: l.moy, texte: dureeTexte(l.moy), sous: `${nf.format(l.n)} affichage${l.n > 1 ? 's' : ''}`, couleur: tous ? couleurSite(l.k) : null })));
+  const totS = Object.values(temps).reduce((s, x) => s + ((x && x.s) || 0), 0);
+  $('badge-temps').hidden = !(totS && visites);
+  if (totS && visites) $('badge-temps').textContent = `${dureeTexte(totS / visites)} par visite`;
+  $('note-temps').textContent = tous ? `Temps moyen par page, par site, sur ${libPeriode}` : `Temps moyen à l'écran par page, sur ${libPeriode}`;
+
+  // --- Les plus consultés (séries, recherches…) ---
+  const contenus = tous ? {} : sommeObjet(cles, 'contenus');
+  const types = Object.keys(contenus).sort((a, b) => (a === 'recherche') - (b === 'recherche') || a.localeCompare(b));
+  carteVide('contenus', !types.length);
+  if (types.length) {
+    if (!types.includes(typeContenu)) typeContenu = types[0];
+    $('choix-contenus').hidden = types.length < 2;
+    $('choix-contenus').innerHTML = types.map((ty) => `<button role="tab" data-type="${echapper(ty)}" aria-selected="${ty === typeContenu}">${echapper((NOMS_TYPES[ty] || [ty, joli(ty)])[1])}</button>`).join('');
+    const noms = (donnees[selection] && donnees[selection].noms && donnees[selection].noms[typeContenu]) || {};
+    const lignes = Object.entries(contenus[typeContenu] || {}).sort((a, b) => b[1] - a[1]).slice(0, 50);
+    barresListe('liste-contenus', lignes.map(([id, n]) => ({ nom: noms[id] || joli(id), valeur: n, texte: nf.format(n) })));
+    $('titre-contenus').textContent = typeContenu === 'recherche' ? 'Les plus recherchés' : typeContenu === 'ajout' ? 'Les plus ajoutés' : 'Les plus consultés';
+    $('note-contenus').textContent = typeContenu === 'recherche' ? `Recherches faites sur ${libPeriode}` : typeContenu === 'ajout' ? `Ajouts aux collections et listes, sur ${libPeriode}` : `Consultations sur ${libPeriode} (une par visite)`;
+  }
+
+  // --- Parties en détail (site de jeux) ---
+  const jeuxSite = !tous && avecParties(selection);
+  carteVide('jeux', !jeuxSite);
+  if (jeuxSite) rendreCarteJeux(cles, libPeriode);
+
+  // --- Santé : erreurs ---
+  const bugs = [];
+  for (const id of tous ? Object.keys(donnees) : [selection]) {
+    const dj = (donnees[id] && donnees[id].jours) || {};
+    for (const c of cles) for (const [k, b] of Object.entries((dj[c] && dj[c].bugs) || {})) if (b && b.m) bugs.push({ ...b, id: k, site: id, jour: c });
+  }
+  bugs.sort((a, b) => (b.t || 0) - (a.t || 0));
+  const nbErr = somme(cles, 'erreurs') || Object.values(sommeObjet(cles, 'erreurs')).reduce((s, n) => s + n, 0);
+  const errParPage = sommeObjet(cles, 'erreurs');
+  const totErr = Object.values(errParPage).reduce((s, n) => s + n, 0) || nbErr;
+  // le même message regroupé
+  const groupes = new Map();
+  for (const b of bugs) {
+    const cle = `${b.site}|${b.m}`;
+    const g = groupes.get(cle);
+    if (g) { g.n++; g.pages.add(b.p); } else groupes.set(cle, { ...b, n: 1, pages: new Set([b.p]) });
+  }
+  const fmtQuand = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  $('liste-bugs').innerHTML = groupes.size ? [...groupes.values()].slice(0, 60).map((g) => `<li>
+      <span class="bug-message">${echapper(g.m)}</span>
+      <span class="bug-infos">${tous ? `<b style="color:${couleurSite(g.site)}">${echapper(nomSite(g.site))}</b> · ` : ''}${[...g.pages].map((p) => echapper(tous ? (SITES[g.site] && SITES[g.site].pages && SITES[g.site].pages[p]) || joli(p) : nomPage(p))).join(', ')}${g.f && g.f !== '-' ? ` · <code>${echapper(g.f)}</code>` : ''} · dernière fois ${g.t ? fmtQuand.format(new Date(g.t)) : fmt(g.jour, { day: 'numeric', month: 'short' })}</span>
+      ${g.n > 1 ? `<span class="bug-nb">×${nf.format(g.n)}</span>` : ''}</li>`).join('')
+    : `<li class="vide-doux">${totErr ? 'Le détail des erreurs n’a pas été noté.' : `Aucune erreur sur ${libPeriode} 🎉`}</li>`;
+  $('note-erreurs').textContent = `Erreurs JavaScript chez les visiteurs, sur ${libPeriode}`;
+  $('badge-erreurs').hidden = !totErr;
+  $('badge-erreurs').className = 'badge baisse';
+  $('badge-erreurs').textContent = `${nf.format(totErr)} erreur${totErr > 1 ? 's' : ''}`;
+  const alerte = $('alerte-sante');
+  const errAuj = Object.values(sommeObjet([jourDe()], 'erreurs')).reduce((s, n) => s + n, 0);
+  alerte.hidden = !errAuj;
+  alerte.textContent = errAuj > 9 ? '9+' : String(errAuj);
+  alerte.title = `${errAuj} erreur${errAuj > 1 ? 's' : ''} aujourd'hui`;
+  barresListe('liste-erreurs-pages', Object.entries(errParPage).sort((a, b) => b[1] - a[1]).slice(0, 20)
+    .map(([k, n]) => ({ nom: nomPage(k), valeur: n, texte: nf.format(n), couleur: tous ? couleurSite(k) : '#F0697C' })), `Aucune page touchée sur ${libPeriode}.`);
+  $('note-erreurs-pages').textContent = tous ? 'Erreurs par site' : 'Erreurs par page';
+  // jours sans erreur
+  let sansErreur = 0;
+  for (let c = jourDe(); sansErreur < 400; c = decaler(c, -1)) {
+    if (!jours[c]) { if (sansErreur > 0 || c < Object.keys(jours).sort()[0]) break; }
+    if (Object.values((jours[c] && jours[c].erreurs) || {}).reduce((s, n) => s + n, 0)) break;
+    sansErreur++;
+  }
+  $('note-erreurs-pages').textContent += totErr ? '' : sansErreur > 1 ? ` · aucune depuis ${sansErreur} jours` : '';
+
+  // --- Santé : temps de chargement ---
+  const charge = sommeObjet(cles, 'chargement');
+  $('nb-chargement').textContent = charge.n ? `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(charge.ms / charge.n / 1000)} s` : '–';
+  $('note-chargement').textContent = charge.n ? `En moyenne, sur ${nf.format(charge.n)} ouvertures (${libPeriode})` : `Pas encore mesuré sur ${libPeriode}`;
+  spark('s-chargement', cles.slice(-30).map((c) => { const x = (jours[c] && jours[c].chargement) || {}; return x.n ? x.ms / x.n : 0; }));
+  const parSite = tous ? Object.keys(donnees).map((id) => {
+    const x = cles.reduce((a, c) => { const y = (donnees[id].jours[c] && donnees[id].jours[c].chargement) || {}; return { ms: a.ms + (y.ms || 0), n: a.n + (y.n || 0) }; }, { ms: 0, n: 0 });
+    return [id, x];
+  }).filter(([, x]) => x.n) : [];
+  $('legende-chargement').innerHTML = parSite.sort((a, b) => b[1].ms / b[1].n - a[1].ms / a[1].n).map(([id, x]) => {
+    const s = x.ms / x.n / 1000;
+    return `<li><span class="puce" style="background:${couleurSite(id)}"></span><span class="lib">${echapper(nomSite(id))}</span><span class="pct">${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(s)} s</span><span class="nb">${s < 1.5 ? 'rapide' : s < 3 ? 'correct' : 'lent'}</span></li>`;
+  }).join('');
+
+  // --- Records ---
+  const semaines = {};
+  for (const c of Object.keys(jours)) {
+    const d = versDate(c); const lundi = decaler(c, -((d.getUTCDay() + 6) % 7));
+    semaines[lundi] = (semaines[lundi] || 0) + v(c, 'visiteurs');
+  }
+  const mSem = Object.entries(semaines).sort((a, b) => b[1] - a[1])[0];
+  $('t-semaine').innerHTML = mSem && mSem[1] ? `${nf.format(mSem[1])}<small>semaine du ${fmt(mSem[0], { day: 'numeric', month: 'long' })}</small>` : '–';
+  const mMois = Object.entries(mois).map(([k, x]) => [k, (x && x.visiteurs) || 0]).sort((a, b) => b[1] - a[1])[0];
+  $('t-mois').innerHTML = mMois && mMois[1] ? `${nf.format(mMois[1])}<small>${fmt(mMois[0], { month: 'long', year: 'numeric' })}</small>` : '–';
+  let serie = 0;
+  for (let c = v(jourDe(), 'visiteurs') ? jourDe() : decaler(jourDe(), -1); v(c, 'visiteurs') > 0 && serie < 999; c = decaler(c, -1)) serie++;
+  $('t-serie').innerHTML = serie ? `${nf.format(serie)}<small>jour${serie > 1 ? 's' : ''}${v(jourDe(), 'visiteurs') ? ', aujourd’hui compris' : ''}</small>` : '–';
+
+  rendreDirect();
+}
+let typeContenu = '';
+$('choix-contenus').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-type]');
+  if (!b || b.dataset.type === typeContenu) return;
+  typeContenu = b.dataset.type;
+  rendre();
+});
+
+// ---------- Parties en détail : durée, parties finies, rejouées ----------
+function rendreCarteJeux(cles, libPeriode) {
+  const entrees = journal(jours, cles, (e) => estPartie(e.a)).map((e) => {
+    const brut = jours[e.jour].journal[e.id] || {};
+    return { ...e, d: typeof brut.d === 'number' ? brut.d : 0, x: brut.x === true };
+  });
+  const notees = entrees.filter((e) => e.d || e.x);
+  const nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+  // rejouées : une partie du même jeu lancée moins de 5 min après la fin de la précédente
+  const parJeu = {};
+  entrees.slice().sort((a, b) => a.t - b.t).forEach((e) => (parJeu[e.p] = parJeu[e.p] || []).push(e));
+  let rejouees = 0, possibles = 0;
+  const stats = Object.entries(parJeu).map(([p, l]) => {
+    let rj = 0;
+    l.forEach((e, i) => {
+      if (!e.d || i === l.length - 1) return;
+      possibles++;
+      if (l[i + 1].t - (e.t + e.d * 1000) < 5 * 60000) { rj++; rejouees++; }
+    });
+    const avecD = l.filter((e) => e.d);
+    const fin = l.filter((e) => e.d || e.x);
+    return { p, n: l.length, moy: avecD.length ? avecD.reduce((s, e) => s + e.d, 0) / avecD.length : 0, finies: fin.length ? fin.filter((e) => e.x).length / fin.length : null, rj };
+  }).sort((a, b) => b.n - a.n);
+  const avecD = notees.filter((e) => e.d);
+  const moyD = avecD.length ? avecD.reduce((s, e) => s + e.d, 0) / avecD.length : 0;
+  const finies = notees.length ? notees.filter((e) => e.x).length / notees.length : null;
+  $('chiffres-jeux').innerHTML = [
+    ['Durée moyenne', moyD ? dureeTexte(moyD) : '–', avecD.length ? `sur ${nf.format(avecD.length)} partie${avecD.length > 1 ? 's' : ''}` : 'pas encore notée'],
+    ['Allées jusqu’au bout', finies !== null ? `${Math.round(finies * 100)} %` : '–', finies !== null ? `${Math.round((1 - finies) * 100)} % abandonnées` : ''],
+    ['Rejouées aussitôt', possibles ? `${Math.round((rejouees / possibles) * 100)} %` : '–', possibles ? 'nouvelle partie dans les 5 min' : ''],
+  ].map(([l, v, s]) => `<div class="mini"><span>${l}</span><strong>${v}</strong><small>${s}</small></div>`).join('');
+  $('note-jeux').textContent = notees.length ? `Parties de ${libPeriode} (durée et fin notées depuis la mise à jour du site de jeux)` : `Durée et fin des parties : notées pour les parties lancées depuis la mise à jour du site de jeux`;
+  $('tableau-jeux').innerHTML = stats.length ? `<table><thead><tr><th>Jeu</th><th>Parties</th><th>Durée moy.</th><th>Finies</th><th>Rejouées</th></tr></thead><tbody>${stats.map((s) => `<tr><td>${echapper(nomPage(s.p))}</td><td>${nf.format(s.n)}</td><td>${s.moy ? dureeTexte(s.moy) : '–'}</td><td>${s.finies !== null ? `${Math.round(s.finies * 100)} %` : '–'}</td><td>${nf.format(s.rj)}</td></tr>`).join('')}</tbody></table>` : '';
+  void nf1;
+}
+
+// ---------- En direct : les visites en cours (lues toutes les 20 secondes) ----------
+let enDirect = {};   // { site: [{ p, t }] }
+async function chargerDirect() {
+  if (DEMO) return;
+  const res = {};
+  await Promise.all(Object.keys(SITES).map(async (id) => {
+    const base = baseDuSite(id);
+    if (!base) return;
+    try {
+      const d = (await lire(base, `stats/${id}/direct`)) || {};
+      const limite = Date.now() - 2 * 60000;
+      res[id] = Object.values(d).filter((x) => x && typeof x.t === 'number' && x.t > limite);
+    } catch (e) { /* base sans les nouvelles règles : rien */ }
+  }));
+  enDirect = res;
+  rendreDirect();
+}
+function rendreDirect() {
+  const ids = selection === 'tous' ? Object.keys(enDirect) : [selection];
+  const lignes = [];
+  for (const id of ids) for (const x of enDirect[id] || []) lignes.push({ id, p: x.p });
+  $('nb-direct').textContent = nf.format(lignes.length);
+  $('nb-direct').classList.toggle('actif', lignes.length > 0);
+  $('note-direct').textContent = lignes.length
+    ? `${lignes.length > 1 ? 'Personnes' : 'Personne'} sur ${selection === 'tous' ? 'tes sites' : nomSite(selection)} en ce moment`
+    : `Personne sur ${selection === 'tous' ? 'tes sites' : nomSite(selection)} en ce moment`;
+  const compte = {};
+  for (const l of lignes) { const k = `${l.id}|${l.p}`; compte[k] = (compte[k] || 0) + 1; }
+  $('liste-direct').innerHTML = Object.entries(compte).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, n]) => {
+    const [id, p] = k.split('|');
+    const nomP = (SITES[id] && SITES[id].pages && SITES[id].pages[p]) || joli(p);
+    return `<li><i style="background:${couleurSite(id)}"></i><span>${selection === 'tous' ? `${echapper(nomSite(id))} · ` : ''}${echapper(nomP)}</span><b>${n}</b></li>`;
+  }).join('');
+}
+
+// ---------- Onglets ----------
+const ONGLETS = ['apercu', 'pages', 'audience', 'appareils', 'sante'];
+let onglet = 'apercu';
+try { const o = (location.hash || '').slice(1) || localStorage.getItem('tdb:onglet'); if (ONGLETS.includes(o)) onglet = o; } catch (e) { /* rien */ }
+function montrerOnglet(nom, animer = true) {
+  onglet = nom;
+  document.body.dataset.onglet = nom;
+  document.querySelectorAll('.pilule[data-onglet]').forEach((p) => {
+    p.classList.toggle('actif', p.dataset.onglet === nom);
+    p.setAttribute('aria-selected', String(p.dataset.onglet === nom));
+    // téléphone : l'onglet choisi reste visible dans la barre qui défile
+    if (p.dataset.onglet === nom && animer && p.parentElement.scrollWidth > p.parentElement.clientWidth) p.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+  });
+  document.querySelectorAll('.grille > [data-onglets]').forEach((c) => {
+    c.hidden = !c.dataset.onglets.split(' ').includes(nom) || c.dataset.vide === '1';
+  });
+  try { localStorage.setItem('tdb:onglet', nom); history.replaceState(null, '', `#${nom}`); } catch (e) { /* rien */ }
+  if (animer) {
+    const grille = document.querySelector('.grille');
+    grille.classList.remove('apparait'); void grille.offsetWidth; grille.classList.add('apparait');
+    clearTimeout(grille._fin); grille._fin = setTimeout(() => grille.classList.remove('apparait'), 1200);
+  }
+}
+document.querySelectorAll('.pilule[data-onglet]').forEach((p) => p.addEventListener('click', () => {
+  if (p.dataset.onglet !== onglet) { montrerOnglet(p.dataset.onglet); scrollTo({ top: 0, behavior: 'smooth' }); }
+}));
+montrerOnglet(onglet, false);
 
 // ---------- Chargement ----------
 function etat(classe, texte) { const el = $('etat'); el.className = `direct verre ${classe}`; el.querySelector('span').textContent = texte; }
@@ -1036,12 +1386,13 @@ async function charger() {
       // Les sites rangés dans cette base (un site déclaré avec une autre base n'est pas compté deux fois)
       const ids = Object.keys(liste).filter((id) => !SITES[id] || baseDuSite(id) === base);
       await Promise.all(ids.map(async (id) => {
-        const [j, m, t] = await Promise.all([
+        const [j, m, t, noms] = await Promise.all([
           lire(base, `stats/${id}/jours`, { orderBy: '"$key"', startAt: `"${debut}"` }),
           lire(base, `stats/${id}/mois`, { orderBy: '"$key"', limitToLast: '24' }),
           lire(base, `stats/${id}/total`),
+          lire(base, `stats/${id}/noms`).catch(() => ({})),
         ]);
-        nouvelles[id] = { jours: j || {}, mois: m || {}, total: t || {} };
+        nouvelles[id] = { jours: j || {}, mois: m || {}, total: t || {}, noms: noms || {} };
       }));
     } catch (e) {
       problemes.push({ base, refus: e instanceof Refus });
@@ -1089,8 +1440,64 @@ brancherBulle($('fiche-graphe'));
 brancherBulle($('fiche-heures'));
 brancherBulle($('jour-heures'));
 
+// Démo des nouveaux compteurs : visites, heures, sources, fidélité, systèmes, temps passé, erreurs, contenus
+const DEMO_CONTENUS = {
+  mangazone: { manga: { 'one-piece': 'One Piece', 'jujutsu-kaisen': 'Jujutsu Kaisen', 'chainsaw-man': 'Chainsaw Man', 'blue-lock': 'Blue Lock', berserk: 'Berserk', 'vinland-saga': 'Vinland Saga', 'dandadan': 'Dandadan', 'death-note': 'Death Note' },
+    recherche: { 'one-piece': 'one piece', 'frieren': 'frieren', 'kagurabachi': 'kagurabachi', 'naruto': 'naruto' } },
+  animezone: { anime: { '21': 'One Piece', '52991': 'Frieren', '40748': 'Jujutsu Kaisen', '57334': 'Dandadan', '16498': 'L’Attaque des Titans', '38000': 'Demon Slayer', '51009': 'Solo Leveling' },
+    recherche: { 'solo-leveling': 'solo leveling', 'frieren': 'frieren', 'chainsaw': 'chainsaw', 'spy-x-family': 'spy x family' } },
+  portfolio: { projet: { 'projet-r': 'Clustering R', 'projet-vba': 'Reporting RH VBA', 'projet-twitch': 'Analyse Data Twitch', 'projet-cook': 'App Cook & Save' } },
+};
+const DEMO_SOURCES = {
+  jeux: { direct: 40, whatsapp: 22, appli: 18, instagram: 10, google: 6, discord: 4 },
+  pyrolos: { direct: 30, google: 25, instagram: 18, facebook: 10, whatsapp: 9, appli: 4 },
+  mangazone: { direct: 30, appli: 25, google: 22, reddit: 8, instagram: 8, discord: 4 },
+  animezone: { direct: 28, appli: 24, google: 26, tiktok: 10, x: 6, discord: 4 },
+  portfolio: { linkedin: 38, direct: 24, google: 18, github: 12, 'e-mail': 6, 'lien-jeux-vol': 2 },
+};
+function completerDemo(id, j, c, visiteurs, mobile, alea, pages, mod) {
+  const tirer = (poids) => { const tot = Object.values(poids).reduce((s, x) => s + x, 0); let r = alea() * tot; for (const [k, x] of Object.entries(poids)) { r -= x; if (r <= 0) return k; } return Object.keys(poids)[0]; };
+  const ajouter = (o, k, n = 1) => { o[k] = (o[k] || 0) + n; };
+  j.visites = Math.round(visiteurs * (1.15 + alea() * 0.35));
+  j.heures = {}; j.sources = {};
+  const we = [0, 6].includes(versDate(c).getUTCDay());
+  for (let k = 0; k < j.visites; k++) {
+    const h = alea() < 0.55 ? 18 + Math.floor(alea() * 5) : (we ? 10 : 12) + Math.floor(alea() * 7);
+    ajouter(j.heures, h % 24);
+    ajouter(j.sources, tirer(DEMO_SOURCES[id] || { direct: 1 }));
+  }
+  j.revenus = Math.round((visiteurs - j.nouveaux) * (0.8 + alea() * 0.2));
+  j.retours = {};
+  for (let k = 0; k < j.revenus; k++) ajouter(j.retours, tirer({ veille: 40, semaine: 35, mois: 18, plus: 7 }));
+  j.systemes = {}; j.navigateurs = {};
+  for (let k = 0; k < mobile; k++) { const ios = alea() < 0.58; ajouter(j.systemes, ios ? 'ios' : 'android'); ajouter(j.navigateurs, ios ? (alea() < 0.85 ? 'safari' : 'instagram') : (alea() < 0.75 ? 'chrome' : 'samsung')); }
+  for (let k = 0; k < visiteurs - mobile; k++) { ajouter(j.systemes, tirer({ windows: 70, macos: 22, linux: 8 })); ajouter(j.navigateurs, tirer({ chrome: 60, edge: 18, firefox: 12, safari: 10 })); }
+  j.temps = {};
+  const base = { jeux: 520, pyrolos: 140, mangazone: 210, animezone: 240, portfolio: 75 }[id] || 120;
+  for (const [p, n] of Object.entries(pages)) j.temps[p] = { n: Math.round(n * 1.3), s: Math.round(n * 1.3 * base * (p === 'accueil' ? 0.25 : 0.6 + alea() * 0.9)) };
+  const n = Math.max(1, Math.round(j.visites * 0.9));
+  j.chargement = { n, ms: Math.round(n * ({ jeux: 1100, pyrolos: 2300, mangazone: 1500, animezone: 1700, portfolio: 800 }[id] || 1200) * (0.8 + alea() * 0.4)) };
+  if (alea() < (id === 'pyrolos' ? 0.25 : 0.08)) {
+    const p = Object.keys(pages)[Math.floor(alea() * Object.keys(pages).length)] || 'accueil';
+    const msg = id === 'pyrolos' ? "Cannot read properties of undefined (reading 'lat')" : id === 'animezone' ? 'Failed to fetch' : 'Promesse rejetée : Permission denied';
+    j.erreurs = { [p]: 1 + Math.floor(alea() * 2) };
+    const [ay, am, ad] = c.split('-').map(Number);
+    j.bugs = { [`demo${c.replace(/-/g, '')}${id}`]: { m: msg, f: id === 'pyrolos' ? 'script.js:2481' : 'app.js:912', p, t: Date.UTC(ay, am - 1, ad, 17, Math.floor(alea() * 59)) } };
+  }
+  if (DEMO_CONTENUS[id]) {
+    j.contenus = {};
+    for (const [ty, liste] of Object.entries(DEMO_CONTENUS[id])) {
+      const ids = Object.keys(liste);
+      j.contenus[ty] = {};
+      for (let k = 0; k < Math.round(visiteurs * (ty === 'recherche' ? 0.5 : 1.2)); k++) ajouter(j.contenus[ty], ids[Math.min(ids.length - 1, Math.floor(alea() * alea() * ids.length * 1.4))]);
+    }
+  }
+  void mod;
+}
+
 if (DEMO) {
   remplirDemo();
+  enDirect = { jeux: [{ p: 'uno' }, { p: 'uno' }, { p: 'skyjo' }], mangazone: [{ p: 'collection' }], portfolio: [{ p: 'projets' }] };
   trierSites();
   etat('ok', 'Démo');
   $('mode').textContent = "Mode démo : les chiffres sont inventés. Retire « ?demo » de l'adresse pour voir les vrais.";
@@ -1100,6 +1507,8 @@ if (DEMO) {
   rendre();
   actualiser();
   setInterval(() => { if (!document.hidden) actualiser(); }, ACTUALISATION * 1000);
+  chargerDirect();
+  setInterval(() => { if (!document.hidden) chargerDirect(); }, 20000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) actualiser(); });
 }
 
@@ -1158,6 +1567,8 @@ function remplirDemo() {
           journalDemo[`demo-${c}-${a}-${pg}-${k}`] = { a, p: pg, t: Date.UTC(ay, am - 1, ad, h - 1, Math.floor(alea() * 60)) };
           const ed = journalDemo[`demo-${c}-${a}-${pg}-${k}`];
           if (mod.parties) {
+            ed.d = Math.round((pg === 'demineur' ? 90 : pg === 'tokyo' ? 2400 : 300 + alea() * 900) * (0.5 + alea()));
+            if (alea() < 0.82) ed.x = true;
             let h = 2 + Math.floor(alea() * 4), b = pg === 'poker' ? Math.floor(alea() * 3) : 0;
             if (uniteManches(id, pg)) {
               ed.m = 1 + Math.floor(alea() * 8);
@@ -1168,6 +1579,7 @@ function remplirDemo() {
       }
       j[c] = { journal: journalDemo, visiteurs, vues: Math.round(visiteurs * (2.6 + alea() * 1.4)), nouveaux: Math.round(visiteurs * (0.3 + alea() * 0.2)),
         appli: Math.round(visiteurs * mod.appli * (0.8 + alea() * 0.4)), appareils: { mobile, ordi: visiteurs - mobile }, pages, actions };
+      completerDemo(id, j[c], c, visiteurs, mobile, alea, pages, mod);
     });
     const m = {};
     for (const mm of derniersMois(14)) m[mm] = { visiteurs: Math.round(Object.keys(j).filter((c) => c.startsWith(mm)).reduce((s, c) => s + j[c].visiteurs, 0) * 0.55) };
@@ -1175,6 +1587,6 @@ function remplirDemo() {
     for (const c of tous) for (const [a, parPage] of Object.entries(j[c].actions || {})) for (const [p, nb] of Object.entries(parPage)) {
       ((totActions[a] = totActions[a] || {})[p] = (totActions[a][p] || 0) + nb);
     }
-    donnees[id] = { jours: j, mois: m, total: { visiteurs: tous.reduce((s, c) => s + j[c].nouveaux, 0), vues: tous.reduce((s, c) => s + j[c].vues, 0), actions: totActions } };
+    donnees[id] = { noms: DEMO_CONTENUS[id] || {}, jours: j, mois: m, total: { visiteurs: tous.reduce((s, c) => s + j[c].nouveaux, 0), vues: tous.reduce((s, c) => s + j[c].vues, 0), actions: totActions } };
   }
 }

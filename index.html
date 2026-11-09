@@ -36,16 +36,22 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
       </a>
     </div>
-    <nav class="pilules" aria-label="Sections">
-      <a class="pilule verre actif" href="#section-apercu" data-section="apercu">
+    <nav class="pilules" aria-label="Onglets" role="tablist">
+      <button type="button" class="pilule verre actif" role="tab" data-onglet="apercu" aria-selected="true">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Aperçu</span>
-      </a>
-      <a class="pilule verre" href="#section-pages" data-section="pages">
+      </button>
+      <button type="button" class="pilule verre" role="tab" data-onglet="pages" aria-selected="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/></svg><span>Pages</span>
-      </a>
-      <a class="pilule verre" href="#section-appareils" data-section="appareils">
+      </button>
+      <button type="button" class="pilule verre" role="tab" data-onglet="audience" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.6 3.4-5.5 6.5-5.5s5.5 1.9 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.8.7 3 2.4 3.5 5.2"/></svg><span>Audience</span>
+      </button>
+      <button type="button" class="pilule verre" role="tab" data-onglet="appareils" aria-selected="false">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="3"/><path d="M11 17h2"/></svg><span>Appareils</span>
-      </a>
+      </button>
+      <button type="button" class="pilule verre" role="tab" data-onglet="sante" aria-selected="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg><span>Santé</span><b class="pastille-alerte" id="alerte-sante" hidden></b>
+      </button>
     </nav>
     <div class="groupe droite">
       <span class="direct verre" id="etat"><i></i><span>Chargement…</span></span>
@@ -58,7 +64,7 @@
 
   <main class="page">
     <!-- Titre et période -->
-    <section class="titre-page" id="section-apercu">
+    <section class="titre-page">
       <div>
         <h1 id="salut">Bonjour</h1>
         <p id="sous-titre">Voici ce qui se passe sur tes sites.</p>
@@ -77,28 +83,28 @@
 
     <div class="grille">
       <!-- Chiffres clés -->
-      <article class="carte verre kpi" style="--teinte: #F2B632">
+      <article class="carte verre kpi" data-onglets="apercu" style="--teinte: #F2B632">
         <div class="kpi-haut"><span class="icone"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span class="fleche">↗</span></div>
         <h2>Visiteurs aujourd'hui</h2>
         <p class="valeur" id="k-aujourdhui">–</p>
         <p class="ecart" id="e-aujourdhui"></p>
         <svg class="spark" id="s-aujourdhui" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
       </article>
-      <article class="carte verre kpi" style="--teinte: #3FBF7F">
+      <article class="carte verre kpi" data-onglets="apercu" style="--teinte: #3FBF7F">
         <div class="kpi-haut"><span class="icone"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span class="fleche">↗</span></div>
         <h2>Visiteurs ce mois-ci</h2>
         <p class="valeur" id="k-mois">–</p>
         <p class="ecart" id="e-mois"></p>
         <svg class="spark" id="s-mois" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
       </article>
-      <article class="carte verre kpi" style="--teinte: #4F8DFF">
+      <article class="carte verre kpi" data-onglets="apercu" style="--teinte: #4F8DFF">
         <div class="kpi-haut"><span class="icone"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="fleche">↗</span></div>
         <h2 id="h-vues">Pages vues</h2>
         <p class="valeur" id="k-vues">–</p>
         <p class="ecart" id="e-vues"></p>
         <svg class="spark" id="s-vues" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
       </article>
-      <article class="carte verre kpi" style="--teinte: #9B7BEA">
+      <article class="carte verre kpi" data-onglets="apercu" style="--teinte: #9B7BEA">
         <div class="kpi-haut"><span class="icone"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg></span><span class="fleche">↗</span></div>
         <h2 id="h-nouveaux">Nouveaux visiteurs</h2>
         <p class="valeur" id="k-nouveaux">–</p>
@@ -107,7 +113,7 @@
       </article>
 
       <!-- Graphique principal -->
-      <section class="carte verre principal" aria-labelledby="titre-graphe">
+      <section class="carte verre principal" data-onglets="apercu" aria-labelledby="titre-graphe">
         <header class="entete-carte">
           <div>
             <h2 id="titre-graphe">Visiteurs uniques par jour</h2>
@@ -130,7 +136,7 @@
       </section>
 
       <!-- Classement : pages d'un site, ou sites entre eux -->
-      <section class="carte verre pages" id="section-pages" aria-labelledby="titre-classement">
+      <section class="carte verre pages" data-onglets="apercu pages" aria-labelledby="titre-classement">
         <header class="entete-carte">
           <div>
             <h2 id="titre-classement">Pages les plus vues</h2>
@@ -144,8 +150,72 @@
         <ol class="classement" id="classement"></ol>
       </section>
 
+      <!-- Temps passé par page -->
+      <section class="carte verre temps" data-onglets="pages" aria-labelledby="titre-temps">
+        <header class="entete-carte">
+          <div><h2 id="titre-temps">Temps passé</h2><p class="note" id="note-temps"></p></div>
+          <span class="badge neutre" id="badge-temps" hidden></span>
+        </header>
+        <ol class="barres-liste" id="liste-temps"></ol>
+      </section>
+
+      <!-- Contenus les plus consultés (séries, recherches…) -->
+      <section class="carte verre contenus" data-onglets="pages" aria-labelledby="titre-contenus">
+        <header class="entete-carte">
+          <div><h2 id="titre-contenus">Les plus consultés</h2><p class="note" id="note-contenus"></p></div>
+          <div class="segment verre petit" id="choix-contenus" role="tablist" aria-label="Type de contenu"></div>
+        </header>
+        <ol class="barres-liste" id="liste-contenus"></ol>
+      </section>
+
+      <!-- Parties : durée, fin, rejouées (site de jeux) -->
+      <section class="carte verre jeux" data-onglets="pages" aria-labelledby="titre-jeux">
+        <header class="entete-carte">
+          <div><h2 id="titre-jeux">Les parties en détail</h2><p class="note" id="note-jeux"></p></div>
+        </header>
+        <div class="mini-chiffres" id="chiffres-jeux"></div>
+        <div class="tableau-jeux" id="tableau-jeux"></div>
+      </section>
+
+      <!-- En direct -->
+      <section class="carte verre direct-carte" data-onglets="apercu audience" aria-labelledby="titre-direct">
+        <header class="entete-carte">
+          <div><h2 id="titre-direct">En direct</h2><p class="note" id="note-direct">Visiteurs sur tes sites en ce moment</p></div>
+          <span class="voyant-direct" aria-hidden="true"></span>
+        </header>
+        <p class="grand-chiffre" id="nb-direct">–</p>
+        <ul class="liste-direct" id="liste-direct"></ul>
+      </section>
+
+      <!-- Carte de chaleur jour × heure -->
+      <section class="carte verre chaleur" data-onglets="audience" aria-labelledby="titre-chaleur">
+        <header class="entete-carte">
+          <div><h2 id="titre-chaleur">Quand viennent les visiteurs</h2><p class="note" id="note-chaleur"></p></div>
+        </header>
+        <div class="grille-chaleur" id="grille-chaleur"></div>
+      </section>
+
+      <!-- D'où viennent les visiteurs -->
+      <section class="carte verre sources" data-onglets="apercu audience" aria-labelledby="titre-sources">
+        <header class="entete-carte">
+          <div><h2 id="titre-sources">D'où ils viennent</h2><p class="note" id="note-sources"></p></div>
+        </header>
+        <div class="repartition" id="repartition-sources"></div>
+        <ul class="legende" id="legende-sources"></ul>
+      </section>
+
+      <!-- Fidélité -->
+      <section class="carte verre fidelite" data-onglets="audience" aria-labelledby="titre-fidelite">
+        <header class="entete-carte">
+          <div><h2 id="titre-fidelite">Fidélité</h2><p class="note" id="note-fidelite"></p></div>
+        </header>
+        <div class="mini-chiffres" id="chiffres-fidelite"></div>
+        <h3 class="sous-titre-carte">Ils reviennent après…</h3>
+        <ul class="legende" id="legende-retours"></ul>
+      </section>
+
       <!-- Appareils -->
-      <section class="carte verre appareils" id="section-appareils" aria-labelledby="titre-appareils">
+      <section class="carte verre appareils" data-onglets="appareils" aria-labelledby="titre-appareils">
         <header class="entete-carte">
           <div><h2 id="titre-appareils">Appareils</h2><p class="note">Visiteurs uniques par jour, cumulés</p></div>
         </header>
@@ -154,7 +224,7 @@
       </section>
 
       <!-- Appli installée -->
-      <section class="carte verre appli" aria-labelledby="titre-appli">
+      <section class="carte verre appli" data-onglets="appareils" aria-labelledby="titre-appli">
         <header class="entete-carte">
           <div><h2 id="titre-appli">Appli installée</h2><p class="note">Visiteurs venus de l'écran d'accueil</p></div>
         </header>
@@ -170,16 +240,58 @@
         </div>
       </section>
 
-      <!-- Depuis le début -->
-      <section class="carte verre total" aria-labelledby="titre-total">
+      <!-- Systèmes et navigateurs -->
+      <section class="carte verre systemes" data-onglets="appareils" aria-labelledby="titre-systemes">
         <header class="entete-carte">
-          <div><h2 id="titre-total">Depuis le début</h2><p class="note">Tous les chiffres enregistrés</p></div>
+          <div><h2 id="titre-systemes">Systèmes</h2><p class="note">Visiteurs uniques par jour, cumulés</p></div>
+        </header>
+        <div class="repartition" id="repartition-systemes"></div>
+        <ul class="legende" id="legende-systemes"></ul>
+      </section>
+      <section class="carte verre navigateurs" data-onglets="appareils" aria-labelledby="titre-navigateurs">
+        <header class="entete-carte">
+          <div><h2 id="titre-navigateurs">Navigateurs</h2><p class="note">Visiteurs uniques par jour, cumulés</p></div>
+        </header>
+        <div class="repartition" id="repartition-navigateurs"></div>
+        <ul class="legende" id="legende-navigateurs"></ul>
+      </section>
+
+      <!-- Santé : erreurs et temps de chargement -->
+      <section class="carte verre erreurs" data-onglets="sante" aria-labelledby="titre-erreurs">
+        <header class="entete-carte">
+          <div><h2 id="titre-erreurs">Erreurs des sites</h2><p class="note" id="note-erreurs"></p></div>
+          <span class="badge" id="badge-erreurs" hidden></span>
+        </header>
+        <ul class="liste-bugs" id="liste-bugs"></ul>
+      </section>
+      <section class="carte verre chargement" data-onglets="sante" aria-labelledby="titre-chargement">
+        <header class="entete-carte">
+          <div><h2 id="titre-chargement">Temps de chargement</h2><p class="note" id="note-chargement"></p></div>
+        </header>
+        <p class="grand-chiffre" id="nb-chargement">–</p>
+        <svg class="spark spark-large" id="s-chargement" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true" style="--teinte:#3FBF7F"></svg>
+        <ul class="legende" id="legende-chargement"></ul>
+      </section>
+      <section class="carte verre erreurs-pages" data-onglets="sante" aria-labelledby="titre-erreurs-pages">
+        <header class="entete-carte">
+          <div><h2 id="titre-erreurs-pages">Pages touchées</h2><p class="note" id="note-erreurs-pages"></p></div>
+        </header>
+        <ol class="barres-liste" id="liste-erreurs-pages"></ol>
+      </section>
+
+      <!-- Depuis le début -->
+      <section class="carte verre total" data-onglets="apercu" aria-labelledby="titre-total">
+        <header class="entete-carte">
+          <div><h2 id="titre-total">Records</h2><p class="note">Depuis le début</p></div>
         </header>
         <dl class="totaux">
           <div><dt>Visiteurs</dt><dd id="t-visiteurs">–</dd></div>
           <div><dt>Pages vues</dt><dd id="t-vues">–</dd></div>
           <div id="t-parties-ligne" hidden><dt>Parties jouées</dt><dd id="t-parties">–</dd></div>
           <div><dt>Meilleur jour</dt><dd id="t-record">–</dd></div>
+          <div><dt>Meilleure semaine</dt><dd id="t-semaine">–</dd></div>
+          <div><dt>Meilleur mois</dt><dd id="t-mois">–</dd></div>
+          <div><dt>Jours d'affilée avec des visites</dt><dd id="t-serie">–</dd></div>
         </dl>
       </section>
     </div>
@@ -209,6 +321,7 @@
         </button>
       </div>
     </header>
+    <p class="note-jour" id="jour-note" hidden></p>
     <div class="fiche-chiffres" id="jour-chiffres"></div>
     <div id="jour-heures-bloc" hidden>
       <div class="fiche-graphe-entete">
