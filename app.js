@@ -155,6 +155,8 @@ function rendre() {
   spark('s-vues', serie('vues'));
   chiffre('k-nouveaux', somme(cles, 'nouveaux'));
   ecart('e-nouveaux', somme(cles, 'nouveaux'), comparable ? somme(avant, 'nouveaux') : null);
+  const privesP = somme(cles, 'prives');
+  $('e-nouveaux').title = privesP ? `Sans les ${privesP} visiteurs en navigation privée (leur navigateur oublie qu'ils sont déjà venus)` : '';
   spark('s-nouveaux', serie('nouveaux'));
 
   // Graphique principal
@@ -1137,6 +1139,8 @@ function rendreExtras(cles, libPeriode) {
     ['Visites par visiteur', visiteurs && visites ? new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(visites / visiteurs) : '–', 'par jour'],
     ['Nouveaux', visiteurs ? `${Math.round((nouveaux / visiteurs) * 100)} %` : '–', `${nf.format(nouveaux)} jamais venus`],
   ];
+  const prives = somme(cles, 'prives');
+  if (prives) chiffres.push(['Navigation privée', `${Math.round((prives / visiteurs) * 100)} %`, `${nf.format(prives)} visiteur${prives > 1 ? 's' : ''}, pas comptés comme nouveaux`]);
   $('chiffres-fidelite').innerHTML = chiffres.map(([l, v, s]) => `<div class="mini"><span>${l}</span><strong>${v}</strong><small>${s}</small></div>`).join('');
   const retours = sommeObjet(cles, 'retours');
   const totR = Object.values(retours).reduce((s, n) => s + n, 0);
@@ -1251,7 +1255,52 @@ function rendreExtras(cles, libPeriode) {
   $('t-serie').innerHTML = serie ? `${nf.format(serie)}<small>jour${serie > 1 ? 's' : ''}${v(jourDe(), 'visiteurs') ? ', aujourd’hui compris' : ''}</small>` : '–';
 
   rendreDirect();
+  rendreEtatSuivi();
 }
+// ---------- État du suivi : chaque site envoie-t-il les nouveaux chiffres ? ----------
+let testRegles = {};   // { base: 'ok' | 'refus' | 'erreur' | 'en-cours' }
+function rendreEtatSuivi() {
+  const auj = jourDe();
+  const lignes = Object.keys(SITES).map((id) => {
+    const dj = (donnees[id] && donnees[id].jours) || {};
+    const avecVisites = Object.keys(dj).filter((c) => dj[c] && dj[c].visiteurs).sort();
+    const dernier = avecVisites[avecVisites.length - 1];
+    const recents = avecVisites.filter((c) => c >= decaler(auj, -2));
+    const nouveau = recents.some((c) => dj[c].visites || dj[c].sources || dj[c].heures);
+    const base = baseDuSite(id);
+    const regle = testRegles[base];
+    let etatS, texte;
+    if (regle === 'refus') { etatS = 'ko'; texte = 'Règles « stats » pas à jour sur sa base : colle le bloc de regles-stats.txt dans la console Firebase, puis Publier.'; }
+    else if (!dernier) { etatS = 'attente'; texte = 'Aucune visite pour l’instant.'; }
+    else if (!recents.length) { etatS = 'attente'; texte = `Pas de visite depuis le ${fmt(dernier, { day: 'numeric', month: 'long' })}.`; }
+    else if (nouveau) { etatS = 'ok'; texte = 'À jour : visites, sources, temps passé, direct…'; }
+    else { etatS = 'ko'; texte = regle === 'ok' ? 'Les visites arrivent avec l’ancien suivi.js : remplace-le sur le site (ou attends 10 min que GitHub Pages et le cache se mettent à jour).' : 'Seules les visites arrivent : l’ancien suivi.js est encore en ligne, ou les règles ne sont pas publiées. Clique sur « Vérifier les règles ».'; }
+    const regleTxt = regle === 'ok' ? '✓ règles publiées' : regle === 'refus' ? '✗ règles pas publiées' : regle === 'en-cours' ? 'vérification…' : regle === 'erreur' ? 'base injoignable' : '';
+    return `<li class="etat-${etatS}"><i></i><span class="lib"><b>${echapper(nomSite(id))}</b><small>${echapper(texte)}</small></span>${regleTxt ? `<span class="regle">${regleTxt}</span>` : ''}</li>`;
+  });
+  $('liste-etat').innerHTML = lignes.join('');
+}
+// Vérifie que chaque base accepte les nouveaux chiffres : on y écrit une « visite en cours » de test,
+// effacée aussitôt (rien ne s'ajoute aux compteurs).
+async function verifierRegles() {
+  if (DEMO) { Object.keys(SITES).forEach((id) => { testRegles[baseDuSite(id)] = 'ok'; }); rendreEtatSuivi(); return; }
+  const parBase = {};
+  Object.keys(SITES).forEach((id) => { const b = baseDuSite(id); if (b && !parBase[b]) parBase[b] = id; });
+  Object.keys(parBase).forEach((b) => { testRegles[b] = 'en-cours'; });
+  rendreEtatSuivi();
+  await Promise.all(Object.entries(parBase).map(async ([base, id]) => {
+    const chemin = `${base}/stats/${id}/direct/test${Date.now().toString(36)}`;
+    try {
+      const r = await fetch(`${chemin}.json`, { method: 'PUT', body: JSON.stringify({ p: 'test-regles', t: { '.sv': 'timestamp' } }) });
+      testRegles[base] = r.ok ? 'ok' : (r.status === 401 || r.status === 403) ? 'refus' : 'erreur';
+      if (r.ok) fetch(`${chemin}.json`, { method: 'DELETE' }).catch(() => {});
+    } catch (e) { testRegles[base] = 'erreur'; }
+  }));
+  rendreEtatSuivi();
+}
+$('verifier-regles').addEventListener('click', verifierRegles);
+let reglesVerifiees = false;
+
 let typeContenu = '';
 $('choix-contenus').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-type]');
@@ -1307,7 +1356,7 @@ async function chargerDirect() {
     try {
       const d = (await lire(base, `stats/${id}/direct`)) || {};
       const limite = Date.now() - 2 * 60000;
-      res[id] = Object.values(d).filter((x) => x && typeof x.t === 'number' && x.t > limite);
+      res[id] = Object.values(d).filter((x) => x && typeof x.t === 'number' && x.t > limite && x.p !== 'test-regles');
     } catch (e) { /* base sans les nouvelles règles : rien */ }
   }));
   enDirect = res;
@@ -1337,6 +1386,8 @@ let onglet = 'apercu';
 try { const o = (location.hash || '').slice(1) || localStorage.getItem('tdb:onglet'); if (ONGLETS.includes(o)) onglet = o; } catch (e) { /* rien */ }
 function montrerOnglet(nom, animer = true) {
   onglet = nom;
+  // en ouvrant Santé : on vérifie une fois que chaque base accepte les nouveaux chiffres
+  if (nom === 'sante' && !reglesVerifiees) { reglesVerifiees = true; setTimeout(verifierRegles, 0); }
   document.body.dataset.onglet = nom;
   document.querySelectorAll('.pilule[data-onglet]').forEach((p) => {
     p.classList.toggle('actif', p.dataset.onglet === nom);

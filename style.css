@@ -387,6 +387,22 @@ body[data-onglet="pages"] .classement { max-height: 460px; }
 .grille-chaleur .h { text-align: left; overflow: visible; }
 .grille-chaleur i { aspect-ratio: 1; border-radius: 4px; background: rgba(79, 141, 255, calc(.08 + var(--a) * .92)); border: 1px solid rgba(255, 255, 255, .04); }
 
+/* État du suivi */
+.etat-suivi { grid-column: 1 / -1; }
+.petit-bouton { height: 34px; padding: 0 14px; font-size: .8rem; white-space: nowrap; }
+.liste-etat { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
+.liste-etat li { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .07); }
+.liste-etat i { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--texte-3); }
+.liste-etat .etat-ok i { background: var(--vert); }
+.liste-etat .etat-ko i { background: var(--rouge); }
+.liste-etat li.etat-ok i { background: var(--vert); }
+.liste-etat li.etat-ko i { background: var(--rouge); }
+.liste-etat li.etat-attente i { background: var(--or); }
+.liste-etat .lib b { display: block; font-size: .88rem; font-weight: 600; }
+.liste-etat .lib small { display: block; font-size: .74rem; color: var(--texte-2); margin-top: 2px; }
+.liste-etat .regle { font-size: .7rem; color: var(--texte-3); white-space: nowrap; margin-top: 2px; }
+.liste-etat li.etat-ko { border-color: rgba(240, 105, 124, .3); }
+
 /* Erreurs */
 .liste-bugs { list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; }
 .liste-bugs li { position: relative; display: flex; flex-direction: column; gap: 3px; padding: 10px 46px 10px 14px; border-radius: 14px; background: rgba(240, 105, 124, .08); border: 1px solid rgba(240, 105, 124, .18); }
