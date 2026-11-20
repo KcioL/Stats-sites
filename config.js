@@ -49,7 +49,7 @@ export const SITES = {
       bataille: 'Bataille navale', chevaux: 'Petits chevaux', puissance4: 'Puissance 4',
       tokyo: 'Monopoly', cluedo: 'Cluedo', mastermind: 'Mastermind', demineur: 'Démineur',
       loupgarou: 'Loup-Garou', undercover: 'Undercover', petitbac: 'Petit bac',
-      yams: 'Yam’s',
+      yams: 'Yam’s', sutom: 'Sutom', pedantix: 'Pédantix', cemantix: 'Cémantix',
     },
   },
   pyrolos: {
@@ -87,7 +87,7 @@ export const SITES = {
       avenir: 'À venir', decouvrir: 'Découvrir', succes: 'Succès', profils: 'Profils', liste: 'Ma liste',
       fiche: 'Fiche d’un anime', profil: 'Profil d’un membre',
     },
-    actions: { 'ajout-liste': ['anime ajouté', 'animes ajoutés'] },
+    actions: { 'ajout-liste': ['anime ajouté', 'animes ajoutés'], 'import-liste': ['liste importée', 'listes importées'] },
   },
   seriezone: {
     logo: 'logos/seriezone.png',

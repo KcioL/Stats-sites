@@ -420,6 +420,13 @@ body[data-onglet="pages"] .classement { max-height: 460px; }
 .tableau-jeux th { text-align: left; font-weight: 500; color: var(--texte-3); font-size: .74rem; padding: 6px 10px; border-bottom: 1px solid rgba(255, 255, 255, .1); white-space: nowrap; }
 .tableau-jeux td { padding: 8px 10px; border-bottom: 1px solid rgba(255, 255, 255, .06); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tableau-jeux td:first-child { font-weight: 500; }
+.tableau-jeux small { color: var(--texte-3); font-size: .72rem; }
+.tableau-resultats { max-height: 360px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .28) transparent; margin-top: 4px; }
+.tableau-resultats thead th { position: sticky; top: 0; background: rgba(30, 30, 34, .92); }
+.tableau-resultats .res-trouve td:nth-child(3) { color: var(--vert); }
+.tableau-resultats .res-rate td:nth-child(3) { color: var(--rouge); }
+.tableau-resultats .res-abandon td:nth-child(3) { color: var(--texte-3); }
+#fiche-resultats-bloc { margin-top: 18px; }
 
 /* Notes sur le graphique */
 .repere { position: absolute; left: 50%; bottom: calc(var(--h) + 8px); width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--or); box-shadow: 0 0 0 3px rgba(242, 182, 50, .25); pointer-events: none; }

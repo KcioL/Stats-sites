@@ -45,6 +45,9 @@
  * Durée et fin : window.suivi.partie(ref, { d: 340, x: true }) note la durée en secondes, et que la partie
  * est allée jusqu'au bout (sinon elle compte comme abandonnée).
  *
+ * Résultats des jeux de mots : window.suivi.resultat('sutom', { n: pseudo, e: essais, s: secondes, g: 'trouve' })
+ * note le résultat d'un joueur (avec son pseudo) dans stats/<site>/jours/AAAA-MM-JJ/resultats/<id>.
+ *
  * Contenus : window.suivi.contenu('serie', '12345', 'One Piece') compte une consultation de ce contenu
  * (une fois par visite) ; window.suivi.recherche('one piece') compte une recherche.
  *
@@ -454,6 +457,24 @@
     contenu('recherche', nettoyer(t), t);
   }
 
+  // ---------- Résultat d'un joueur (jeux de mots : Sutom, Pédantix, Cémantix…) ----------
+  // window.suivi.resultat('sutom', { n: 'Léa', e: 4, s: 95, g: 'trouve', m: 'jour', k: 324 })
+  //   n : pseudo · e : tentatives · s : secondes · g : 'trouve' | 'rate' | 'abandon'
+  //   m : mode ('jour', 'libre', 'course'…) · k : numéro du mot du jour · i : indices utilisés
+  function resultat(page, infos = {}) {
+    const p = nettoyer(page) || pageCourante;
+    const n = String(infos.n || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+    if (!p || !n || horsJeu() || !stockage()) return;
+    const entree = { p, n, t: MAINTENANT, g: ['trouve', 'rate', 'abandon'].includes(infos.g) ? infos.g : 'rate' };
+    const nombre = (x, max) => { const v = Math.round(Number(x)); return Number.isFinite(v) && v >= 0 && v <= max ? v : null; };
+    if (nombre(infos.e, 999) !== null) entree.e = nombre(infos.e, 999);
+    if (nombre(infos.s, 604800) !== null) entree.s = nombre(infos.s, 604800);
+    if (nombre(infos.k, 100000) !== null) entree.k = nombre(infos.k, 100000);
+    if (nombre(infos.i, 999) !== null) entree.i = nombre(infos.i, 999);
+    if (/^[a-z]{2,10}$/.test(infos.m || '')) entree.m = infos.m;
+    envoyer({ [`${S}/jours/${jourDe(new Date())}/resultats/${idAuHasard()}`]: entree });
+  }
+
   // Première page : comptée un peu après l'ouverture, pour ne pas ralentir le site
   let pageInitiale = pageCourante;
   let lance = false;
@@ -487,5 +508,6 @@
     partie,
     contenu,
     recherche,
+    resultat,
   };
 })();

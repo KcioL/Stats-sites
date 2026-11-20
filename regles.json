@@ -142,6 +142,42 @@
                 }
               }
             },
+            "resultats": {
+              "$id": {
+                ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/) && $id.matches(/^[a-z0-9]{6,24}$/) && !data.exists()",
+                ".validate": "newData.hasChildren(['p', 'n', 'g', 't'])",
+                "p": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9-]{2,40}$/)"
+                },
+                "n": {
+                  ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
+                },
+                "g": {
+                  ".validate": "newData.isString() && (newData.val() == 'trouve' || newData.val() == 'rate' || newData.val() == 'abandon')"
+                },
+                "e": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999"
+                },
+                "s": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 604800"
+                },
+                "k": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+                },
+                "i": {
+                  ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999"
+                },
+                "m": {
+                  ".validate": "newData.isString() && newData.val().matches(/^[a-z]{2,10}$/)"
+                },
+                "t": {
+                  ".validate": "newData.isNumber() && newData.val() == now"
+                },
+                "$autre": {
+                  ".validate": false
+                }
+              }
+            },
             "journal": {
               "$id": {
                 ".write": "$site.matches(/^[a-z0-9-]{2,30}$/) && $jour.matches(/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/) && $id.matches(/^[a-z0-9-]{6,40}$/) && !data.exists()",

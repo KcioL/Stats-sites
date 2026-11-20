@@ -78,7 +78,7 @@ function preparerVue() {
     for (const [cle, j] of Object.entries(d.jours || {})) {
       const t = jours[cle] || (jours[cle] = { visiteurs: 0, vues: 0, nouveaux: 0, appli: 0, appareils: {}, pages: {} });
       // tous les compteurs s'additionnent (sauf les pages, remplacées par les sites, et les listes)
-      additionner(t, j, ['pages', 'journal', 'bugs', 'contenus', 'temps', 'actions', 'erreurs']);
+      additionner(t, j, ['pages', 'journal', 'bugs', 'contenus', 'temps', 'actions', 'erreurs', 'resultats']);
       if (j.visiteurs) t.pages[id] = j.visiteurs;
       // temps passé et erreurs : par site
       const tp = Object.values(j.temps || {}).reduce((a, x) => ({ s: a.s + ((x && x.s) || 0), n: a.n + ((x && x.n) || 0) }), { s: 0, n: 0 });
@@ -641,10 +641,61 @@ function rendreFiche(animerFiche = false) {
       $('fiche-journal').innerHTML = pastillesJournal(entrees, true); // toutes les parties (liste qui défile)
     } else entreesFiche = [];
     rendrePartie();
+    rendreResultats(page, cles, libPeriode);
   });
 }
 
 $('fiche-fermer').addEventListener('click', () => $('fiche').close());
+
+// ---------- Résultats des joueurs (Sutom, Pédantix, Cémantix…) : pseudo, essais, temps ----------
+let vueResultats = 'joueurs';
+const NOMS_RESULTAT = { trouve: '✓ trouvé', rate: '✗ raté', abandon: 'abandon' };
+const NOMS_MODE = { jour: 'du jour', libre: 'libre', course: 'course en ligne' };
+function resultatsDe(page, cles) {
+  const res = [];
+  for (const c of cles) for (const [id, x] of Object.entries((jours[c] && jours[c].resultats) || {})) {
+    if (x && x.p === page && x.n) res.push({ id, jour: c, ...x });
+  }
+  return res.sort((a, b) => (b.t || 0) - (a.t || 0));
+}
+function rendreResultats(page, cles, libPeriode) {
+  const bloc = $('fiche-resultats-bloc');
+  const res = selection === 'tous' ? [] : resultatsDe(page, cles);
+  bloc.hidden = !res.length;
+  if (!res.length) return;
+  const nf1 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+  const temps = (s) => (typeof s === 'number' ? dureeTexte(s) : '–');
+  const trouves = res.filter((x) => x.g === 'trouve');
+  $('fiche-resultats-note').textContent = `${nf.format(res.length)} partie${res.length > 1 ? 's' : ''} terminée${res.length > 1 ? 's' : ''} sur ${libPeriode} · ${Math.round((trouves.length / res.length) * 100)} % trouvées`;
+  $('fiche-resultats-choix').querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.vue === vueResultats)));
+  if (vueResultats === 'joueurs') {
+    // par pseudo : parties, trouvées, essais moyens (parties trouvées), meilleur temps, dernière partie
+    const parJoueur = {};
+    for (const x of res) {
+      const k = x.n.toLowerCase();
+      const j = parJoueur[k] || (parJoueur[k] = { n: x.n, parties: 0, trouves: 0, essais: 0, meilleur: null, dernier: 0 });
+      j.parties++;
+      if (x.g === 'trouve') {
+        j.trouves++; j.essais += x.e || 0;
+        if (typeof x.s === 'number' && (j.meilleur === null || x.s < j.meilleur)) j.meilleur = x.s;
+      }
+      j.dernier = Math.max(j.dernier, x.t || 0);
+    }
+    const lignes = Object.values(parJoueur).sort((a, b) => b.trouves - a.trouves || (a.trouves ? a.essais / a.trouves - b.essais / b.trouves : 0) || b.parties - a.parties);
+    $('fiche-resultats').innerHTML = `<table><thead><tr><th>Joueur</th><th>Parties</th><th>Trouvées</th><th>Essais moy.</th><th>Meilleur temps</th></tr></thead><tbody>${lignes.map((j, i) =>
+      `<tr><td>${i < 3 && j.trouves ? ['🥇', '🥈', '🥉'][i] + ' ' : ''}${echapper(j.n)}</td><td>${nf.format(j.parties)}</td><td>${nf.format(j.trouves)} <small>(${Math.round((j.trouves / j.parties) * 100)} %)</small></td><td>${j.trouves ? nf1.format(j.essais / j.trouves) : '–'}</td><td>${j.meilleur !== null ? temps(j.meilleur) : '–'}</td></tr>`).join('')}</tbody></table>`;
+  } else {
+    const fmtQ = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    $('fiche-resultats').innerHTML = `<table><thead><tr><th>Quand</th><th>Joueur</th><th>Résultat</th><th>Essais</th><th>Temps</th><th>Mot</th></tr></thead><tbody>${res.slice(0, 300).map((x) =>
+      `<tr class="res-${x.g}"><td>${x.t ? fmtQ.format(new Date(x.t)) : fmt(x.jour, { day: 'numeric', month: 'short' })}</td><td>${echapper(x.n)}</td><td>${NOMS_RESULTAT[x.g] || x.g}</td><td>${typeof x.e === 'number' ? nf.format(x.e) : '–'}${x.i ? ` <small>(${x.i} indice${x.i > 1 ? 's' : ''})</small>` : ''}</td><td>${temps(x.s)}</td><td>${x.m === 'jour' && x.k ? `du jour n°${x.k}` : (NOMS_MODE[x.m] || '–')}</td></tr>`).join('')}</tbody></table>`;
+  }
+}
+$('fiche-resultats-choix').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-vue]');
+  if (!b || b.dataset.vue === vueResultats) return;
+  vueResultats = b.dataset.vue;
+  rendreFiche();
+});
 
 // ---------- Journal : heure exacte de chaque partie (ou action) ----------
 const fmtHeure = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' });
@@ -1543,6 +1594,24 @@ function completerDemo(id, j, c, visiteurs, mobile, alea, pages, mod) {
     const [ay, am, ad] = c.split('-').map(Number);
     j.bugs = { [`demo${c.replace(/-/g, '')}${id}`]: { m: msg, f: id === 'pyrolos' ? 'script.js:2481' : 'app.js:912', p, t: Date.UTC(ay, am - 1, ad, 17, Math.floor(alea() * 59)) } };
   }
+  // jeux de mots : résultats des joueurs (pseudo, essais, temps)
+  if (id === 'jeux') {
+    const pseudos = ['Loïck', 'Camille', 'Léa', 'Hugo', 'Manon', 'Théo', 'Inès'];
+    const [ay, am, ad] = c.split('-').map(Number);
+    j.resultats = {};
+    for (const pg of ['sutom', 'pedantix', 'cemantix']) {
+      for (let k = 0; k < Math.round((pages[pg] || 0) * 1.2); k++) {
+        const g = alea() < 0.78 ? 'trouve' : alea() < 0.6 ? 'rate' : 'abandon';
+        const e = pg === 'sutom' ? (g === 'rate' ? 6 : 2 + Math.floor(alea() * 4)) : 8 + Math.floor(alea() * (pg === 'cemantix' ? 90 : 40));
+        j.resultats[`demo${c.replace(/-/g, '')}${pg}${k}`] = {
+          p: pg, n: pseudos[Math.floor(alea() * alea() * pseudos.length)], g, e,
+          s: Math.round((pg === 'sutom' ? 60 : 420) * (0.4 + alea() * 1.6)), m: alea() < 0.7 ? 'jour' : 'libre',
+          k: Math.floor((versDate(c) - Date.UTC(2026, 0, 1)) / 86400000) + 1, t: Date.UTC(ay, am - 1, ad, 7 + Math.floor(alea() * 15), Math.floor(alea() * 60)),
+          ...(pg === 'cemantix' ? { i: Math.floor(alea() * 3) } : {}),
+        };
+      }
+    }
+  }
   if (DEMO_CONTENUS[id]) {
     j.contenus = {};
     for (const [ty, liste] of Object.entries(DEMO_CONTENUS[id])) {
@@ -1577,7 +1646,7 @@ function remplirDemo() {
   const alea = () => ((graine = (graine * 16807) % 2147483647) / 2147483647);
   const modeles = {
     jeux: { base: 8, pente: 0.09, weekend: 1.6, appli: 0.22, mobile: 0.72, parties: true,
-      pages: { accueil: 12, uno: 9, skyjo: 7, loupgarou: 6, undercover: 5, president: 5, petitbac: 4, poker: 4, cranes: 3, bataille: 3, puissance4: 3, tokyo: 2, kassen: 2, cluedo: 2, chevaux: 2, blackjack: 2, demineur: 1.5, mastermind: 1, yams: 3 } },
+      pages: { accueil: 12, uno: 9, skyjo: 7, loupgarou: 6, undercover: 5, president: 5, petitbac: 4, poker: 4, cranes: 3, bataille: 3, puissance4: 3, tokyo: 2, kassen: 2, cluedo: 2, chevaux: 2, blackjack: 2, demineur: 1.5, mastermind: 1, yams: 3, sutom: 4, pedantix: 2, cemantix: 2.5 } },
     pyrolos: { base: 6, pente: 0.03, weekend: 1.8, appli: 0.05, mobile: 0.6,
       pages: { carte: 10, itineraires: 6, meteo: 5, classement: 3, riders: 2, messages: 2, succes: 1.5 } },
     mangazone: { base: 4, pente: 0.02, weekend: 1.3, appli: 0.35, mobile: 0.8,

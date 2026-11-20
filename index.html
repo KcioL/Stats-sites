@@ -387,6 +387,17 @@
         <div class="partie-detail" id="fiche-partie" hidden></div>
       </div>
     </div>
+    <!-- Résultats des joueurs (jeux de mots : pseudo, essais, temps) -->
+    <div id="fiche-resultats-bloc" hidden>
+      <div class="fiche-graphe-entete">
+        <div><h3>Résultats des joueurs</h3><p class="note" id="fiche-resultats-note"></p></div>
+        <div class="segment verre petit" id="fiche-resultats-choix" role="tablist" aria-label="Résultats affichés">
+          <button role="tab" data-vue="joueurs" aria-selected="true">Par joueur</button>
+          <button role="tab" data-vue="parties" aria-selected="false">Partie par partie</button>
+        </div>
+      </div>
+      <div class="tableau-jeux tableau-resultats" id="fiche-resultats"></div>
+    </div>
   </dialog>
 </body>
 </html>
