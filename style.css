@@ -427,6 +427,14 @@ body[data-onglet="pages"] .classement { max-height: 460px; }
 .tableau-resultats .res-rate td:nth-child(3) { color: var(--rouge); }
 .tableau-resultats .res-abandon td:nth-child(3) { color: var(--texte-3); }
 #fiche-resultats-bloc { margin-top: 18px; }
+.jour-resultats { margin-bottom: 14px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .07); }
+.jour-resultats h4 { font-size: .9rem; font-weight: 600; margin: 2px 0 6px; }
+.jour-resultats h4 small { font-weight: 400; color: var(--texte-3); font-size: .76rem; }
+.jour-resultats td { border-bottom-color: rgba(255, 255, 255, .05); white-space: normal; padding: 7px 8px; }
+.jour-resultats table { width: 100%; }
+@media (max-width: 760px) { .jour-resultats td { padding: 6px 4px; font-size: .8rem; } .jour-resultats { padding: 8px 8px; } }
+.jour-resultats td:first-child { width: 28px; padding-right: 0; }
+.jour-resultats .sous-entete td { font-size: .7rem; color: var(--texte-3); text-transform: uppercase; letter-spacing: .04em; padding-top: 10px; font-weight: 500; }
 
 /* Notes sur le graphique */
 .repere { position: absolute; left: 50%; bottom: calc(var(--h) + 8px); width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--or); box-shadow: 0 0 0 3px rgba(242, 182, 50, .25); pointer-events: none; }

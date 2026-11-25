@@ -648,7 +648,7 @@ function rendreFiche(animerFiche = false) {
 $('fiche-fermer').addEventListener('click', () => $('fiche').close());
 
 // ---------- Résultats des joueurs (Sutom, Pédantix, Cémantix…) : pseudo, essais, temps ----------
-let vueResultats = 'joueurs';
+let vueResultats = 'jours';
 const NOMS_RESULTAT = { trouve: '✓ trouvé', rate: '✗ raté', abandon: 'abandon' };
 const NOMS_MODE = { jour: 'du jour', libre: 'libre', course: 'course en ligne' };
 function resultatsDe(page, cles) {
@@ -668,7 +668,29 @@ function rendreResultats(page, cles, libPeriode) {
   const trouves = res.filter((x) => x.g === 'trouve');
   $('fiche-resultats-note').textContent = `${nf.format(res.length)} partie${res.length > 1 ? 's' : ''} terminée${res.length > 1 ? 's' : ''} sur ${libPeriode} · ${Math.round((trouves.length / res.length) * 100)} % trouvées`;
   $('fiche-resultats-choix').querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.vue === vueResultats)));
-  if (vueResultats === 'joueurs') {
+  // classement d'une partie : trouvé d'abord, puis le moins d'essais, puis le plus rapide
+  const ordre = (a, b) => (a.g === 'trouve' ? 0 : 1) - (b.g === 'trouve' ? 0 : 1) || (a.g === 'trouve' ? (a.e || 0) - (b.e || 0) : 0) || (a.s ?? 1e9) - (b.s ?? 1e9);
+  if (vueResultats === 'jours') {
+    // jour par jour : le mot du jour d'abord (tout le monde a le même mot), puis les parties libres
+    const parJour = {};
+    for (const x of res) (parJour[x.jour] = parJour[x.jour] || []).push(x);
+    const auj = jourDe();
+    $('fiche-resultats').innerHTML = Object.keys(parJour).sort().reverse().map((c) => {
+      const liste = parJour[c];
+      const duJour = liste.filter((x) => x.m === 'jour').sort(ordre);
+      const autres = liste.filter((x) => x.m !== 'jour').sort(ordre);
+      const num = duJour.find((x) => x.k)?.k;
+      const quand = c === auj ? "Aujourd'hui" : c === decaler(auj, -1) ? 'Hier' : fmt(c, { weekday: 'long', day: 'numeric', month: 'long' });
+      const joueurs = new Set(liste.map((x) => x.n.toLowerCase())).size;
+      const ligne = (x, i, classe) => `<tr class="res-${x.g}"><td>${classe && x.g === 'trouve' && i < 3 ? ['🥇', '🥈', '🥉'][i] : ''}</td><td>${echapper(x.n)}</td><td>${NOMS_RESULTAT[x.g] || x.g}</td><td>${typeof x.e === 'number' ? `${nf.format(x.e)} essai${x.e > 1 ? 's' : ''}` : '–'}${x.i ? ` <small>(${x.i} indice${x.i > 1 ? 's' : ''})</small>` : ''}</td><td>${temps(x.s)}</td></tr>`;
+      return `<section class="jour-resultats">
+        <h4>${quand.charAt(0).toUpperCase() + quand.slice(1)}<small>${num ? ` · mot du jour n°${num}` : ''} · ${joueurs} joueur${joueurs > 1 ? 's' : ''} · ${liste.filter((x) => x.g === 'trouve').length}/${liste.length} trouvé${liste.length > 1 ? 's' : ''}</small></h4>
+        <table><tbody>
+          ${duJour.length ? `<tr class="sous-entete"><td colspan="5">Mot du jour</td></tr>${duJour.map((x, i) => ligne(x, i, true)).join('')}` : ''}
+          ${autres.length ? `<tr class="sous-entete"><td colspan="5">Parties libres${autres.some((x) => x.m === 'course') ? ' et courses' : ''}</td></tr>${autres.map((x, i) => ligne(x, i, false)).join('')}` : ''}
+        </tbody></table></section>`;
+    }).join('');
+  } else if (vueResultats === 'joueurs') {
     // par pseudo : parties, trouvées, essais moyens (parties trouvées), meilleur temps, dernière partie
     const parJoueur = {};
     for (const x of res) {
